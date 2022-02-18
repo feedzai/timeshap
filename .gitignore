@@ -9,3 +9,5 @@ build/
 .ipynb_checkpoints
 .idea/
 __pycache__/
+playground
+**/outputs

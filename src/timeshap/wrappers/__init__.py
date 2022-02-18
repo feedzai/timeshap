@@ -12,4 +12,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .utils import calc_avg_event, get_avg_score_with_avg_event
+from .wrappers import *
