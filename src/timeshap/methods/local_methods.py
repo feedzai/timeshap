@@ -132,7 +132,7 @@ def local_report(f: Callable[[np.ndarray], np.ndarray],
         data = data[model_features]
         data = np.expand_dims(data.to_numpy().copy(), axis=0)
 
-    coal_plot_data, coal_prun_idx = local_pruning(f, data, pruning_dict, entity_uuid, entity_col, baseline, verbose)
+    coal_plot_data, coal_prun_idx = local_pruning(f, data, pruning_dict, baseline, entity_uuid, entity_col, verbose)
     # coal_prun_idx is in negative terms
     pruning_idx = data.shape[1] + coal_prun_idx
     pruning_plot = plot_temp_coalition_pruning(coal_plot_data, coal_prun_idx, 40)

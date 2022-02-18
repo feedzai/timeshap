@@ -120,7 +120,7 @@ def local_feat(f: Callable[[np.ndarray], np.ndarray],
     """
     if feature_dict.get("path") is None or not os.path.exists(feature_dict.get("path")):
         print("No path to feature data provided. Calculating data")
-        feat_data = feature_level(f, baseline, data, feature_dict.get("rs"), feature_dict.get("nsamples"), pruned_idx, model_feats=feature_dict.get("feature_names"))
+        feat_data = feature_level(f, data, baseline, pruned_idx, feature_dict.get("rs"), feature_dict.get("nsamples"), model_feats=feature_dict.get("feature_names"))
         if feature_dict.get("path") is not None:
             feat_data.to_csv(feature_dict.get("path"), index=False)
     elif feature_dict.get("path") is not None and os.path.exists(feature_dict.get("path")):

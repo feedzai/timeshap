@@ -207,7 +207,7 @@ def cell_level(f: Callable,
     else:
         raise ValueError("No threshold condition provided for cell level")
 
-    varying_cells, names = considered_cells(event_data, feat_data, kwargs)
+    varying_cells, names = considered_cells(event_data, feat_data, **kwargs)
 
     negative_indexes = np.array([False if x >= 0 else True for x in varying_cells[0]])
     if any(negative_indexes):

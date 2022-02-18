@@ -172,7 +172,7 @@ def local_pruning(f: Callable[[np.ndarray], np.ndarray],
                   entity_uuid: Union[str, int, float] = None,
                   entity_col: str = None,
                   verbose: bool = False,
-                  ) -> Tuple[int, pd.DataFrame]:
+                  ) -> Tuple[pd.DataFrame, int]:
     """Method to prune a sequence or fetch the respective information if a path
     is provided
 
