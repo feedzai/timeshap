@@ -1,0 +1,13 @@
+data
+**/.ipynb_checkpoints
+*.egg-info/
+*.egg
+eggs/
+.eggs/
+develop-eggs/
+build/
+.ipynb_checkpoints
+.idea/
+__pycache__/
+playground
+**/outputs
