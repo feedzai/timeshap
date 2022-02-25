@@ -12,5 +12,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .base_wrapper import *
-from .torch_wrappers import *
+from abc import ABC
+
+
+class TimeSHAPWrapper(ABC):
+    """
+    Base class for TimeSHAP model wrappers.
+    """
+    def __init__(self, model, batch_budget):
+        self.model = model
+        self.batch_budget = batch_budget
+
+    def __call__(self, *args, **kwargs):
+        return self.model(*args, *kwargs)

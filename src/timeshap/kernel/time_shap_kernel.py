@@ -270,8 +270,12 @@ class TimeShapKernel(Kernel):
                 if self.varyingFeatureGroups.shape[1] == 1:
                     self.varyingFeatureGroups = self.varyingFeatureGroups.flatten()
 
-        # Removed the input variability to receive pd.series and DataFrame
-        model_out, _ = self.model.f(instance.x)
+        if self.returns_hs:
+            # Removed the input variability to receive pd.series and DataFrame
+            model_out, _ = self.model.f(instance.x)
+        else:
+            model_out = self.model.f(instance.x)
+
 
         self.fx = model_out[0]
         if not self.vector_out:
@@ -419,8 +423,6 @@ class TimeShapKernel(Kernel):
             phi = np.zeros((self.data.groups_size, self.D))
             for d in range(self.D):
                 vphi, _ = self.solve(self.nsamples / self.max_samples, d)
-                # if self.mode == 'hidden':
-                #     phi[list(self.varyingFeatureGroups) + [self.data.groups_size-1], d] = vphi
                 if self.mode == 'event':
                     phi[:, d] = vphi
                 elif self.mode == 'cell':
@@ -657,11 +659,13 @@ class TimeShapKernel(Kernel):
 
         data = self.synth_data[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :, :]
 
-        if self.mode == 'pruning':
-            modelOut, _ = self.model.f(data)
-        else:
+        if not self.mode == 'pruning' and self.returns_hs:
             hidden_sates = self.synth_hidden_states[self.nsamplesRun * self.N:self.nsamplesAdded * self.N,:, :]
             modelOut, _ = self.model.f(data, hidden_sates)
+        elif self.returns_hs:
+            modelOut, _ = self.model.f(data)
+        else:
+            modelOut = self.model.f(data)
 
         if isinstance(modelOut, (pd.DataFrame, pd.Series)):
             modelOut = modelOut.values

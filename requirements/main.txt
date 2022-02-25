@@ -9,3 +9,4 @@ plotly>=4.6
 seaborn>=0.11.2
 torch
 tensorflow
+altair
