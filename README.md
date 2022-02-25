@@ -70,7 +70,7 @@ the pruning index along the information for plotting.
 [`plot_temp_coalition_pruning()`](src/timeshap/plot/pruning.py) plots the pruning 
 algorithm information calculated by `local_pruning()`.
 
-<img src="resources/images/pruning.png" width="250">
+<img src="resources/images/pruning.png" width="300">
 
 ##### Event level explanations
 
@@ -81,7 +81,7 @@ event-level explanations.
 [`plot_event_heatmap()`](src/timeshap/plot/event_level.py) plots the event-level explanations
 calculated by `local_event()`.
 
-<img src="resources/images/event_level.png" width="250">
+<img src="resources/images/event_level.png" width="275">
 
 ##### Feature level explanations
 
@@ -92,7 +92,7 @@ feature-level explanations.
 [`plot_feat_barplot()`](src/timeshap/plot/feature_level.py) plots the feature-level explanations
 calculated by `local_feat()`.
 
-<img src="resources/images/feature_level.png" width="250">
+<img src="resources/images/feature_level.png" width="300">
 
 ##### Cell level explanations
 
@@ -103,7 +103,7 @@ and user-given parameteres, returing the respective cell-level explanations.
 [`plot_cell_level()`](src/timeshap/plot/cell_level.py) plots the feature-level explanations
 calculated by  `local_cell_level()`.
 
-<img src="resources/images/cell_level.png" width="250">
+<img src="resources/images/cell_level.png" width="350">
 
 ##### Local Report
 
@@ -133,7 +133,7 @@ event level explanations for multiple instances given user defined parameters.
 [`plot_global_event()`](src/timeshap/plot/event_level.py) plots the global event-level explanations
 calculated by `event_explain_all()`.
 
-<img src="resources/images/global_event.png" width="400">
+<img src="resources/images/global_event.png" width="550">
 
 ##### Global feature level explanations
 
