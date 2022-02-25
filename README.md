@@ -11,6 +11,9 @@ This repository is the code implementation of the TimeSHAP algorithm
 present in the paper `TimeSHAP: Explaining Recurrent Models through Sequence Perturbations`
 published in KDD 2021.
 
+You can find our paper [here](https://arxiv.org/abs/2012.00073).
+You can also find the video presentation for this paper [here](https://www.youtube.com/watch?v=Q7Q9o7ywXx8).
+
 ## Install TimeSHAP
 Clone the repository into a local directory using:
 ```
@@ -67,7 +70,7 @@ the pruning index along the information for plotting.
 [`plot_temp_coalition_pruning()`](src/timeshap/plot/pruning.py) plots the pruning 
 algorithm information calculated by `local_pruning()`.
 
-<img src="resources/images/pruning.png" width="100">
+<img src="resources/images/pruning.png" width="250">
 
 ##### Event level explanations
 
@@ -78,7 +81,7 @@ event-level explanations.
 [`plot_event_heatmap()`](src/timeshap/plot/event_level.py) plots the event-level explanations
 calculated by `local_event()`.
 
-<img src="resources/images/event_level.png" width="100">
+<img src="resources/images/event_level.png" width="250">
 
 ##### Feature level explanations
 
@@ -89,7 +92,7 @@ feature-level explanations.
 [`plot_feat_barplot()`](src/timeshap/plot/feature_level.py) plots the feature-level explanations
 calculated by `local_feat()`.
 
-<img src="resources/images/feature_level.png" width="100">
+<img src="resources/images/feature_level.png" width="250">
 
 ##### Cell level explanations
 
@@ -100,14 +103,14 @@ and user-given parameteres, returing the respective cell-level explanations.
 [`plot_cell_level()`](src/timeshap/plot/cell_level.py) plots the feature-level explanations
 calculated by  `local_cell_level()`.
 
-<img src="resources/images/cell_level.png" width="100">
+<img src="resources/images/cell_level.png" width="250">
 
 ##### Local Report
 
 [`local_report()`](src/timeshap/explainer/local_methods.py) calculates TimeSHAP 
 local explanations for a given sequence and plots them.
 
-<img src="resources/images/local_report.png" width="600">
+<img src="resources/images/local_report.png" width="800">
 
 #### Global Explanations
 
@@ -130,7 +133,7 @@ event level explanations for multiple instances given user defined parameters.
 [`plot_global_event()`](src/timeshap/plot/event_level.py) plots the global event-level explanations
 calculated by `event_explain_all()`.
 
-<img src="resources/images/global_event.png" width="100">
+<img src="resources/images/global_event.png" width="400">
 
 ##### Global feature level explanations
 
@@ -140,7 +143,7 @@ feature level explanations for multiple instances given user defined parameters.
 [`plot_global_feat()`](src/timeshap/plot/feature_level.py) plots the global feature-level 
 explanations calculated by `feat_explain_all()`.
 
-<img src="resources/images/global_feat.png" width="100">
+<img src="resources/images/global_feat.png" width="400">
 
 
 ##### Global report
