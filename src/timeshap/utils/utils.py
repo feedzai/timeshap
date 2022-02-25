@@ -75,7 +75,10 @@ def get_avg_score_with_avg_event(model: Union[TimeSHAPWrapper, torch.nn.Module, 
     expanded = np.expand_dims(med, axis=0)
     for x in range(1, top):
         expanded_copy = copy.deepcopy(expanded)
-        pred, hs = model(expanded_copy, hs)
+        if len(model.__code__.co_varnames) == 1:
+            pred = model(expanded_copy)
+        else:
+            pred, hs = model(expanded_copy, hs)
         avg_score[x] = float(pred[0])
     return avg_score
 

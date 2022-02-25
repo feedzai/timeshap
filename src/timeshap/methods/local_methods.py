@@ -135,7 +135,8 @@ def local_report(f: Callable[[np.ndarray], np.ndarray],
     coal_plot_data, coal_prun_idx = local_pruning(f, data, pruning_dict, baseline, entity_uuid, entity_col, verbose)
     # coal_prun_idx is in negative terms
     pruning_idx = data.shape[1] + coal_prun_idx
-    pruning_plot = plot_temp_coalition_pruning(coal_plot_data, coal_prun_idx, 40)
+    plot_lim = max(pruning_idx, 40)
+    pruning_plot = plot_temp_coalition_pruning(coal_plot_data, coal_prun_idx, plot_lim)
 
     event_data = local_event(f, data, event_dict, entity_uuid, entity_col, baseline, pruning_idx)
     event_plot = plot_event_heatmap(event_data)

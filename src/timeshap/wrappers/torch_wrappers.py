@@ -18,19 +18,7 @@ import copy
 import torch
 import math
 from typing import Tuple
-from abc import ABC
-
-
-class TimeSHAPWrapper(ABC):
-    """
-    Base class for TimeSHAP model wrappers.
-    """
-    def __init__(self, model, batch_budget):
-        self.model = model
-        self.batch_budget = batch_budget
-
-    def __call__(self, *args, **kwargs):
-        return self.model(*args, *kwargs)
+from timeshap.wrappers import TimeSHAPWrapper
 
 
 class TorchModelWrapper(TimeSHAPWrapper):
