@@ -19,25 +19,25 @@ import logging
 import copy
 import itertools
 
-from timeshap.kernel import time_shap_match_instance_to_data, \
+from timeshap.utils.timeshap_legacy import time_shap_match_instance_to_data, \
     time_shap_match_model_to_data, time_shap_convert_to_data, TimeShapDenseData
 from shap.utils._legacy import convert_to_link, IdentityLink
 from shap.utils._legacy import convert_to_instance, convert_to_model
 from shap.explainers._kernel import Kernel
 from scipy.special import binom
 from scipy.sparse import issparse
-import time
+
 log = logging.getLogger('shap')
 
 
 class TimeShapKernel(Kernel):
     """Uses the Kernel SHAP method to explain the output of any function.
 
-    Kernel SHAP is a method that uses a special weighted linear regression
-    to compute the importance of each feature. The computed importance values
-    are Shapley values from game theory and also coefficents from a local linear
-    regression.
-
+    TimeSHAP extends KernelSHAP to explain sequences of features on several axis.
+    TimeSHAP calculates, event, feature, and cell level explanations.
+    Due to sequences being arbitrarily long, TimeSHAP also implements a pruning
+    algorithm based on Shapley values, to select the most relevant, recent,
+    consecutive events.
 
     Parameters
     ----------
@@ -63,8 +63,8 @@ class TimeShapKernel(Kernel):
         Possible values: ["pruning", "event", "feature", "cell"]
             - "pruning" - used for pruning algorithm
             - "event" - used for event explanations
-            - "feature" -
-            - "cell" -
+            - "feature" - used for feature explanations
+            - "cell" -used for cell explanations
 
     varying: Tuple
         index of varying indexes on cell level

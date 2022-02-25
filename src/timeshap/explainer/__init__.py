@@ -1,3 +1,4 @@
+from .kernel import *
 from .pruning import *
 from .event_level import *
 from .feature_level import *

@@ -12,5 +12,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .modded_legacy import *
-from .time_shap_kernel import TimeShapKernel
+from .timeshap_kernel import TimeShapKernel

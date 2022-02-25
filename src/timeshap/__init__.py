@@ -13,6 +13,6 @@
 #  limitations under the License.
 
 from .utils import *
-from .kernel import *
+from .explainer import *
 from .plot import *
-from .methods import *
+from .wrappers import *

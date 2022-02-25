@@ -15,10 +15,9 @@
 from typing import Callable, Union, Tuple, List
 import numpy as np
 import pandas as pd
-from timeshap.kernel import TimeShapKernel
+from timeshap.explainer.kernel import TimeShapKernel
 import os
 import csv
-import copy
 
 
 def pruning_statistics(df: pd.DataFrame,
@@ -113,7 +112,7 @@ def temp_coalition_pruning(f: Callable,
         In case of np.array feature are assumed to be in order with `model_features`.
 
     tolerance: float
-        Temporal coalition methods tolerance.
+        Temporal coalition explainer tolerance.
         Represents the maximum allowed Shapley Value of the older grouped events.
 
     ret_plot_data: bool
@@ -223,7 +222,7 @@ def local_pruning(f: Callable[[np.ndarray], np.ndarray],
         return coal_prun_idx, coal_plot_data
 
     if pruning_dict.get("path") is None or not os.path.exists(pruning_dict.get("path")):
-        print("No path to methods data provided. Calculating data")
+        print("No path to explainer data provided. Calculating data")
         if baseline is None:
             raise ValueError("Baseline is not defined")
         coal_prun_idx, coal_plot_data = calculate_pruning()
@@ -238,7 +237,7 @@ def local_pruning(f: Callable[[np.ndarray], np.ndarray],
             coal_plot_data = coal_plot_data[coal_plot_data[entity_col] == entity_uuid]
         coal_prun_idx = prune_given_data(coal_plot_data, pruning_dict.get('tol'))
     else:
-        raise ValueError('Unrecognized methods procedure.')
+        raise ValueError('Unrecognized explainer procedure.')
     return coal_plot_data, coal_prun_idx
 
 

@@ -14,7 +14,7 @@
 from typing import Callable, Union, Tuple, List
 import numpy as np
 import pandas as pd
-from timeshap.kernel import TimeShapKernel
+from timeshap.explainer.kernel import TimeShapKernel
 import os
 
 

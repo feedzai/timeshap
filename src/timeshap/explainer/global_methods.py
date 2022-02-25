@@ -15,7 +15,7 @@
 from typing import Callable, Union
 import numpy as np
 import pandas as pd
-from timeshap.methods import prune_all, pruning_statistics, event_explain_all, feat_explain_all
+from timeshap.explainer import prune_all, pruning_statistics, event_explain_all, feat_explain_all
 from timeshap.plot import plot_global_event, plot_global_feat
 
 

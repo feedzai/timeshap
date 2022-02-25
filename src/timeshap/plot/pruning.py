@@ -23,7 +23,7 @@ def plot_temp_coalition_pruning(df: pd.DataFrame,
                                 plot_limit=50,
                                 solve_negatives=True,
                                 ):
-    """Plots the coalition methods process
+    """Plots the coalition explainer process
 
     Parameters
     ----------
@@ -31,10 +31,10 @@ def plot_temp_coalition_pruning(df: pd.DataFrame,
         Pruning algorithm output
 
     pruned_idx: int
-        Index the methods takes place
+        Index the explainer takes place
 
     plot_limit: int
-        Window of events to show the methods to
+        Window of events to show the explainer to
 
     solve_negatives: bool
         Whether to remove negative importances of the background instances

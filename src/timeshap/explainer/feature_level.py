@@ -15,20 +15,19 @@
 from typing import Callable, List, Union
 import numpy as np
 import pandas as pd
-from timeshap.kernel import TimeShapKernel
+from timeshap.explainer.kernel import TimeShapKernel
 import os
-import re
 import csv
 
 
-def event_level(f: Callable,
-                data: np.ndarray,
-                baseline: np.ndarray,
-                pruned_idx: int,
-                random_seed: int,
-                nsamples: int,
-                display_events: List[str] = None,
-                ) -> pd.DataFrame:
+def feature_level(f: Callable,
+                  data: np.ndarray,
+                  baseline: np.ndarray,
+                  pruned_idx: int,
+                  random_seed: int,
+                  nsamples: int,
+                  model_feats=None,
+                  ) -> pd.DataFrame:
     """Method to calculate event level explanations
 
     Parameters
@@ -54,36 +53,38 @@ def event_level(f: Callable,
     nsamples: int
         The number of coalitions for TimeSHAP to sample.
 
-    display_events: List[str]
-        In-order list of event names to be displayed
+    model_feats: List
+        The list of feature names.
+        If none is provided, "Feature 1" format is used
 
     Returns
     -------
     pd.DataFrame
     """
-    explainer = TimeShapKernel(f, baseline, random_seed, "event")
+    if pruned_idx == -1:
+        pruned_idx = 0
+
+    explainer = TimeShapKernel(f, baseline, random_seed, "feature")
     shap_values = explainer.shap_values(data, pruning_idx=pruned_idx, nsamples=nsamples)
 
-    if display_events is None:
-        display_events = ["Event {}".format(str(-int(i))) for i in np.arange(1, data.shape[1]-pruned_idx+1)]
-    else:
-        display_events = display_events[-len(shap_values)+1:]
-    display_events += ["Pruned Events"]
+    if model_feats is None:
+        model_feats = ["Feature {}".format(i) for i in np.arange(data.shape[2])]
 
+    model_feats_w_hs = model_feats + ["Pruned Events"]
     ret_data = []
-    for exp, event in zip(shap_values, display_events):
-        ret_data += [[random_seed, nsamples, event, exp]]
+    for exp, feature in zip(shap_values, model_feats_w_hs):
+        ret_data += [[random_seed, nsamples, feature, exp]]
     return pd.DataFrame(ret_data, columns=['Random seed', 'NSamples', 'Feature', 'Shapley Value'])
 
 
-def local_event(f: Callable[[np.ndarray], np.ndarray],
-                data: Union[pd.DataFrame, np.array],
-                event_dict: dict,
-                entity_uuid: Union[str, int, float],
-                entity_col: str,
-                baseline: Union[pd.DataFrame, np.array],
-                pruned_idx: int,
-                ):
+def local_feat(f: Callable[[np.ndarray], np.ndarray],
+               data: Union[pd.DataFrame, np.array],
+               feature_dict: dict,
+               entity_uuid: Union[str, int, float],
+               entity_col: str,
+               baseline: Union[pd.DataFrame, np.array],
+               pruned_idx: int,
+               ):
     """Method to calculate event level explanations or load them if path is provided
 
     Parameters
@@ -96,8 +97,8 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
     data: pd.DataFrame
         Sequence to explain.
 
-    event_dict: dict
-        Information required for the event level explanation calculation
+    feature_dict: dict
+        Information required for the feature level explanation calculation
 
     entity_uuid: Union[str, int, float]
         The indentifier of the sequence that is being pruned.
@@ -117,16 +118,16 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
     -------
     pd.DataFrame
     """
-    if event_dict.get("path") is None or not os.path.exists(event_dict.get("path")):
-        print("No path to event data provided. Calculating data")
-        event_data = event_level(f, data, baseline, pruned_idx, event_dict.get("rs"), event_dict.get("nsamples"))
-        if event_dict.get("path") is not None:
-            event_data.to_csv(event_dict.get("path"), index=False)
-    elif event_dict.get("path") is not None and os.path.exists(event_dict.get("path")):
-        event_data = pd.read_csv(event_dict.get("path"))
-        if len(event_data.columns) == 5 and entity_col is not None:
-            event_data = event_data[event_data[entity_col] == entity_uuid]
-        elif len(event_data.columns) == 4:
+    if feature_dict.get("path") is None or not os.path.exists(feature_dict.get("path")):
+        print("No path to feature data provided. Calculating data")
+        feat_data = feature_level(f, data, baseline, pruned_idx, feature_dict.get("rs"), feature_dict.get("nsamples"), model_feats=feature_dict.get("feature_names"))
+        if feature_dict.get("path") is not None:
+            feat_data.to_csv(feature_dict.get("path"), index=False)
+    elif feature_dict.get("path") is not None and os.path.exists(feature_dict.get("path")):
+        feat_data = pd.read_csv(feature_dict.get("path"))
+        if len(feat_data.columns) == 5 and entity_col is not None:
+            feat_data = feat_data[feat_data[entity_col] == entity_uuid]
+        elif len(feat_data.columns) == 4:
             pass
         else:
             # TODO
@@ -135,20 +136,19 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
             raise ValueError
     else:
         raise ValueError
+    return feat_data
 
-    return event_data
 
-
-def event_explain_all(f: Callable,
-                      data: pd.DataFrame,
-                      entity_col: str,
-                      baseline: Union[pd.DataFrame, np.ndarray],
-                      event_dict: dict,
-                      pruning_data: pd.DataFrame,
-                      model_features: List[str],
-                      time_col: str = None,
-                      verbose: bool = False,
-                      ) -> pd.DataFrame:
+def feat_explain_all(f: Callable,
+                     data: pd.DataFrame,
+                     entity_col: str,
+                     baseline: Union[pd.DataFrame, np.ndarray],
+                     feat_dict: dict,
+                     pruning_data: pd.DataFrame,
+                     model_features: List[str],
+                     time_col: str = None,
+                     verbose: bool = False,
+                     ):
     """Calculates event level explanations for all entities on the provided
     DataFrame applying pruning if explicit
 
@@ -170,8 +170,8 @@ def event_explain_all(f: Callable,
         Dataset baseline. Median/Mean of numerical features and mode of categorical.
         In case of np.array feature are assumed to be in order with `model_features`.
 
-    event_dict: dict
-        Information required for the event level explanation calculation
+    feat_dict: dict
+        Information required for the feature level explanation calculation
 
     pruning_data: pd.DataFrame
         Pruning indexes for all sequences being explained.
@@ -191,39 +191,40 @@ def event_explain_all(f: Callable,
     -------
     pd.DataFrame
     """
-    file_path = event_dict.get('path')
+
+    file_path = feat_dict.get('path')
     tolerances_to_calc = np.unique(pruning_data['Tolerance'].values)
     make_predictions = True
-    event_data = None
+    feat_data = None
     if os.path.exists(file_path):
         conditions = []
         necessary_entities = set(np.unique(data[entity_col].values))
-        event_data = pd.read_csv(file_path)
-        present_entities = set(np.unique(event_data[entity_col].values))
+        feat_data = pd.read_csv(file_path)
+        present_entities = set(np.unique(feat_data[entity_col].values))
         if necessary_entities.issubset(present_entities):
             conditions.append(True)
-            event_data = event_data[event_data[entity_col].isin(necessary_entities)]
+            feat_data = feat_data[feat_data[entity_col].isin(necessary_entities)]
 
         necessary_tols = set(tolerances_to_calc)
         loaded_csv = pd.read_csv(file_path)
         present_tols = set(np.unique(loaded_csv['Tolerance'].values))
         if necessary_tols.issubset(present_tols):
             conditions.append(True)
-            event_data = event_data[event_data['Tolerance'].isin(necessary_tols)]
+            feat_data = feat_data[loaded_csv['Tolerance'].isin(necessary_tols)]
 
         make_predictions = ~np.array(conditions).all()
 
     if make_predictions:
-        random_seeds = event_dict.get('rs')
+        random_seeds = feat_dict.get('rs')
         if isinstance(random_seeds, int):
             random_seeds = [random_seeds]
-        nsamples = event_dict.get('nsamples')
+        nsamples = feat_dict.get('nsamples')
         if isinstance(nsamples, int):
             nsamples = [nsamples]
         if time_col is None:
             print("No time col provided, assuming dataset is ordered ascendingly by date")
 
-        names = ["Random Seed", "NSamples", "Event",  "Shapley Value", "t (event index)", entity_col, 'Tolerance']
+        names = ["Random Seed", "NSamples", "Feature",  "Shapley Value", entity_col, 'Tolerance']
         with open(file_path, 'w', newline='') as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow(names)
@@ -231,7 +232,7 @@ def event_explain_all(f: Callable,
         for rs in random_seeds:
             for ns in nsamples:
                 for uuid in np.unique(data[entity_col].values):
-                    event_data = None
+                    feat_data = None
                     prev_pruning_idx = None
                     for tol in tolerances_to_calc:
                         seq = data[data[entity_col] == uuid]
@@ -247,17 +248,19 @@ def event_explain_all(f: Callable,
                             pruning_idx = seq.shape[1] + pruning_idx
                             if prev_pruning_idx == pruning_idx:
                                 # we have already calculated this, let's use it from the last iteration
-                                event_data['Tolerance'] = tol
+                                feat_data['Tolerance'] = tol
                             else:
-                                local_event_dict = {'rs': rs, 'nsamples': ns}
-                                event_data = local_event(f, seq, local_event_dict, uuid, entity_col, baseline, pruning_idx)
-                                event_data['Event index'] = event_data['Feature'].apply(lambda x: 1 if x == 'Pruned Events' else -int(re.findall(r'\d+', x)[0])+1)
-                                event_data[entity_col] = uuid
-                                event_data['Tolerance'] = tol
+                                local_feat_dict = {'rs': rs, 'nsamples': ns}
+                                if feat_dict.get('feature_names'):
+                                    local_feat_dict['feature_names'] = feat_dict.get('feature_names')
+                                feat_data = local_feat(f, seq, local_feat_dict, uuid, entity_col, baseline, pruning_idx)
+                                feat_data[entity_col] = uuid
+                                feat_data['Tolerance'] = tol
                                 if file_path is not None:
                                     with open(file_path, 'a', newline='') as file:
                                         writer = csv.writer(file, delimiter=',')
-                                        writer.writerows(event_data.values)
+                                        writer.writerows(feat_data.values)
                             prev_pruning_idx = pruning_idx
-        event_data = pd.read_csv(file_path)
-    return event_data
+        feat_data = pd.read_csv(file_path)
+    return feat_data
+
