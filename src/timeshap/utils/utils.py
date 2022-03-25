@@ -12,12 +12,9 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import List, Union
+from typing import List
 import pandas as pd
 import numpy as np
-import torch
-from timeshap.wrappers import TimeSHAPWrapper
-import tensorflow as tf
 import copy
 
 
@@ -50,14 +47,14 @@ def calc_avg_event(data: pd.DataFrame,
     return pd.concat([numerical, categorical], axis=1)[ordered_feats]
 
 
-def get_avg_score_with_avg_event(model: Union[TimeSHAPWrapper, torch.nn.Module, tf.Module], med, top=1000):
+def get_avg_score_with_avg_event(model, med, top=1000):
     """Repeats the avg event N times and returns the score of the last
     event
 
     Parameters
     ----------
     model: Union[TimeSHAPWrapper, torch.nn.Module, tf.Module]
-        Wrapper to use Zaitorch models
+        An RNN model.
 
     med:
         Average event of the dataset.
@@ -81,4 +78,3 @@ def get_avg_score_with_avg_event(model: Union[TimeSHAPWrapper, torch.nn.Module, 
             pred, hs = model(expanded_copy, hs)
         avg_score[x] = float(pred[0])
     return avg_score
-

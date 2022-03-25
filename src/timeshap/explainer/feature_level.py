@@ -270,4 +270,3 @@ def feat_explain_all(f: Callable,
                             prev_pruning_idx = pruning_idx
         feat_data = pd.read_csv(file_path)
     return feat_data
-

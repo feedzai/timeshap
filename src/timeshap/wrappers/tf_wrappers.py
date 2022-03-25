@@ -11,3 +11,11 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""Wrapper to explain custom TensorFlow RNN models.
+"""
+
+raise NotImplementedError(
+    "This is where you would implement your wrappers for Tensorflow models "
+    "(for instance, in case you have more complex TF functionality such that "
+    "your model does not accept simple numpy arrays as input)."
+)

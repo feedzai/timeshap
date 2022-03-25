@@ -11,5 +11,26 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""Helper functions to check installed dependencies.
+"""
+from typing import Callable, Any, Type
 
-from .timeshap import *
+
+def is_torch_installed() -> bool:
+    def func():
+        import torch
+    return not check_if_raises(func, ImportError)
+
+
+def is_tensorflow_installed() -> bool:
+    def func():
+        import tensorflow
+    return not check_if_raises(func, ImportError)
+
+
+def check_if_raises(func: Callable[[], Any], err: Type) -> bool:
+    try:
+        func()
+    except err:
+        return True
+    return False

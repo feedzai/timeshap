@@ -11,8 +11,6 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""The TimeSHAP package"""
 
-from .utils import *
-from .explainer import *
-from .plot import *
-from .wrappers import *
+from .version import __version__
