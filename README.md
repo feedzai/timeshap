@@ -9,7 +9,9 @@ the most to the decision.
 
 This repository is the code implementation of the TimeSHAP algorithm 
 present in the paper `TimeSHAP: Explaining Recurrent Models through Sequence Perturbations`
-published at KDD 2021. Links to the paper [here](https://arxiv.org/abs/2012.00073), and to the video presentation [here](https://www.youtube.com/watch?v=Q7Q9o7ywXx8).
+published at **KDD 2021**. 
+
+Links to the paper [here](https://arxiv.org/abs/2012.00073), and to the video presentation [here](https://www.youtube.com/watch?v=Q7Q9o7ywXx8).
 
 
 ## Install TimeSHAP
