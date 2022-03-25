@@ -11,13 +11,17 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""Wrapper to explain custom PyTorch RNN models.
+"""
 
 import numpy as np
 import pandas as pd
 import copy
-import torch
 import math
 from typing import Tuple
+
+import torch
+
 from timeshap.wrappers import TimeSHAPWrapper
 
 

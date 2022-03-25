@@ -12,5 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .base_wrapper import *
-from .torch_wrappers import *
+from .base_wrapper import TimeSHAPWrapper
+
+
+# Guarding against torch not installed
+from ..utils.compatibility import is_torch_installed
+if is_torch_installed():
+    from .torch_wrappers import TorchModelWrapper

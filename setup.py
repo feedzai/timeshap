@@ -24,11 +24,21 @@ REQUIREMENTS_PATH = ROOT_PATH / 'requirements' / 'main.txt'
 # REQUIREMENTS_TEST_PATH = ROOT_PATH / 'requirements' / 'test.txt'
 
 with REQUIREMENTS_PATH.open() as requirements_file:
-    REQUIREMENTS = list(stream_requirements(requirements_file))
+    requirements = list(stream_requirements(requirements_file))
 
 # with REQUIREMENTS_TEST_PATH.open() as test_requirements_file:
-#     REQUIREMENTS_TEST = REQUIREMENTS[:]
-#     REQUIREMENTS_TEST.extend(stream_requirements(test_requirements_file))
+#     requirements_test = requirements[:]
+#     requirements_test.extend(stream_requirements(test_requirements_file))
+
+
+# ---------------------------------------------------------------------------- #
+#                                   Version                                    #
+# ---------------------------------------------------------------------------- #
+SRC_PATH = ROOT_PATH / 'src' / 'timeshap'
+VERSION_PATH = SRC_PATH / 'version.py'
+
+with VERSION_PATH.open('rb') as version_file:
+    exec(version_file.read())
 
 
 # ---------------------------------------------------------------------------- #
@@ -36,7 +46,7 @@ with REQUIREMENTS_PATH.open() as requirements_file:
 # ---------------------------------------------------------------------------- #
 setup(
     name='timeshap',
-    version='0.0.0',
+    version=__version__,
     description="KernelSHAP adaptation for recurrent models.",
     keywords=['explainability', 'TimeShap'],
 
@@ -52,7 +62,7 @@ setup(
 
     python_requires='>=3.6.*',
 
-    install_requires=REQUIREMENTS,
+    install_requires=requirements,
 
     zip_safe=False,
 
