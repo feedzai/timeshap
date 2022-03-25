@@ -69,7 +69,7 @@ class TorchModelWrapper(TimeSHAPWrapper):
             sequence = np.expand_dims(sequence, axis=0)
 
         if not (len(sequence.shape) == 3 and isinstance(sequence, np.ndarray)):
-            raise ValueError("Input type not suported")
+            raise ValueError("Input type not supported")
 
         return sequence
 
