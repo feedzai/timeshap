@@ -64,17 +64,18 @@ previously described interface, including both PyTorch and TensorFlow models,
 both examplified in our tutorials ([PyTorch](notebooks/AReM/AReM.ipynb), [TensorFlow](notebooks/AReM/AReM_TF.ipynb)).
 
 Example provided in our tutorials:
-- TensorFLow
+- **TensorFLow**
 ```
 model = tf.keras.models.Model(inputs=inputs, outputs=ff2)
 f = lambda x: model.predict(x)
 ```
 
-- Pytorch - (Example where model receives and returns hidden states)
+- **Pytorch** - (Example where model receives and returns hidden states)
 ```
 model_wrapped = TorchModelWrapper(model)
 f_hs = lambda x, y=None: model_wrapped.predict_last_hs(x, y)
 ```
+
 
 ###### Model Wrappers
 In order to facilitate the interface between models and TimeSHAP, 
@@ -85,6 +86,7 @@ of explained models as they allow:
 on GPU memory, and therefore batching mechanisms are required;
 - **Input format/type**: useful when your model does not work with numpy arrays. This
 is the case of our provided PyToch example; 
+
 
 
 ### TimeSHAP Explanation Methods
