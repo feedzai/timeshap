@@ -213,7 +213,7 @@ Additionally, we also train a TensorFlow model on the same dataset
 
 ## Citing TimeSHAP
 ```
-@inproceedings{10.1145/3447548.3467166, #bento2021timeshap
+@inproceedings{bento2021timeshap,
     author = {Bento, Jo\~{a}o and Saleiro, Pedro and Cruz, Andr\'{e} F. and Figueiredo, M\'{a}rio A.T. and Bizarro, Pedro},
     title = {TimeSHAP: Explaining Recurrent Models through Sequence Perturbations},
     year = {2021},
