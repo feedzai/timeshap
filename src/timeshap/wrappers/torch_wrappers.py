@@ -90,14 +90,23 @@ class TorchModelWrapper(TimeSHAPWrapper):
                 data_tensor = torch.from_numpy(sequences.copy()).float().to(device)
                 if hidden_states is not None:
                     hidden_states_tensor = torch.from_numpy(hidden_states)
-                    predictions, hs = self.model(data_tensor, hidden_states_tensor)
+                    predictions = self.model(data_tensor, hidden_states_tensor)
                 else:
-                    predictions, hs = self.model(data_tensor)
+                    predictions = self.model(data_tensor)
                 self.model.train(True)
-            return predictions.cpu().numpy(), hs.cpu().numpy()
+                if not isinstance(predictions, tuple):
+                    return predictions.cpu().numpy()
+                elif isinstance(predictions, tuple) and len(predictions) == 2:
+                    predictions, hs = predictions
+                    return predictions.cpu().numpy(), hs.cpu().numpy()
+                else:
+                    raise NotImplementedError(
+                        "Only models that return predictions or predictions + hidden states are supported for now.")
+
         else:
             return_scores = []
             return_hs = []
+            hs = None
             for i in range(0, sequences.shape[0], batch_size):
                 batch = sequences[i:(i + batch_size), :, :]
                 batch_tensor = torch.from_numpy(batch.copy())
@@ -106,13 +115,23 @@ class TorchModelWrapper(TimeSHAPWrapper):
                     batch_tensor = batch_tensor.float().to(device)
                     if hidden_states is not None:
                         batch_hs_tensor = torch.from_numpy(hidden_states[:, i:(i + batch_size), :].copy()).float().to(device)
-                        predictions, hs = self.model(batch_tensor, batch_hs_tensor)
+                        predictions = self.model(batch_tensor, batch_hs_tensor)
                     else:
-                        predictions, hs = self.model(batch_tensor)
+                        predictions = self.model(batch_tensor)
                     self.model.train(True)
-                    predictions = predictions.cpu()
-                    hs = hs.cpu()
+
+                    if not isinstance(predictions, tuple):
+                        predictions = predictions.cpu()
+                    elif isinstance(predictions, tuple) and len(predictions) == 2:
+                        predictions, hs = predictions
+                        predictions, hs = predictions.cpu(), hs.cpu()
+                        return_hs.append(hs.numpy())
+                    else:
+                        raise NotImplementedError(
+                            "Only models that return predictions or predictions + hidden states are supported for now.")
+
                 return_scores.append(predictions.numpy())
-                return_hs.append(hs.numpy())
+            if hs is None:
+                return np.concatenate(tuple(return_scores), axis=0)
 
             return np.concatenate(tuple(return_scores), axis=0), np.concatenate(tuple(return_hs), axis=1)
