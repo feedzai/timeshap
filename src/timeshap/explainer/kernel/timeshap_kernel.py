@@ -686,7 +686,7 @@ class TimeShapKernel(Kernel):
         data = self.synth_data[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :, :]
 
         if not self.mode == 'pruning' and self.returns_hs:
-            hidden_sates = self.synth_hidden_states[self.nsamplesRun * self.N:self.nsamplesAdded * self.N,:, :]
+            hidden_sates = self.synth_hidden_states[:, self.nsamplesRun * self.N: self.nsamplesAdded * self.N,:]
             modelOut, _ = self.model.f(data, hidden_sates)
         elif self.returns_hs:
             modelOut, _ = self.model.f(data)
