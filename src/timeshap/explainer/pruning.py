@@ -137,7 +137,7 @@ def temp_coalition_pruning(f: Callable,
 
     if ret_plot_data:
         plot_data = []
-    pruning_idx = 1
+    pruning_idx = 0
     for seq_len in range(data.shape[1], -1, -1):
         explainer = TimeShapKernel(f, baseline, 0, "pruning")
         shap_values = explainer.shap_values(data, pruning_idx=seq_len, **{'nsamples': 4})
@@ -147,19 +147,19 @@ def temp_coalition_pruning(f: Callable,
 
         if verbose:
             print("len {} | importance {}".format(-data.shape[1] + seq_len, shap_values[1]))
-        if tolerance and abs(shap_values[1]) <= tolerance:
-            if pruning_idx == 1:
+        if seq_len < data.shape[1] and tolerance and abs(shap_values[1]) <= tolerance:
+            if pruning_idx == 0:
                 pruning_idx = -data.shape[1] + seq_len
             if not ret_plot_data:
                 return pruning_idx
 
-    if tolerance and pruning_idx == 1:
+    if tolerance is not None and pruning_idx == 0:
         pruning_idx = -data.shape[1]
 
-    if tolerance and ret_plot_data:
+    if tolerance is not None and ret_plot_data:
         # used for plotting
         return pruning_idx,  pd.DataFrame(plot_data, columns=['Coalition', 't (event index)', 'Shapley Value'])
-    if tolerance and not ret_plot_data:
+    if tolerance is not None and not ret_plot_data:
         # used for event level
         return pruning_idx
     return pd.DataFrame(plot_data, columns=['Coalition', 't (event index)', 'Shapley Value'])

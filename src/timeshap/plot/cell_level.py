@@ -49,8 +49,12 @@ def plot_cell_level(cell_data: pd.DataFrame,
     if plot_features:
         plot_features = copy.deepcopy(plot_features)
         sort_features = [plot_features[x] for x in model_features if x in unique_feats]
-        plot_features['Other Features'] = 'Other Features'
-        plot_features['Pruned Events'] = 'Pruned Events'
+        if 'Other Features' in np.unique(cell_data['Feature'].values):
+            plot_features['Other Features'] = 'Other Features'
+
+        if 'Pruned Events' in np.unique(cell_data['Feature'].values):
+            plot_features['Pruned Events'] = 'Pruned Events'
+
         cell_data['Feature'] = cell_data['Feature'].apply(lambda x: plot_features[x])
     else:
         sort_features = [x for x in model_features if x in unique_feats]
@@ -59,20 +63,15 @@ def plot_cell_level(cell_data: pd.DataFrame,
     cell_data['rounded_str'] = cell_data['Shapley Value'].apply(lambda x: '0.000' if round(x, 3) == 0 else str(round(x, 3)))
     cell_data['rounded_str'] = cell_data['rounded_str'].apply(lambda x: f'{x}0' if len(x) == 4 else x)
 
-    #isolate the pruned contribution
-    df_prun = cell_data[np.logical_and(cell_data['Event'] == 'Pruned Events', cell_data['Feature'] == 'Pruned Events')]
-    assert df_prun.shape == (1, 5)
-    prun_rounded_str = df_prun.iloc[0]['rounded_str']
-    prun_rounded = df_prun.iloc[0]['rounded']
-    df_prun = pd.DataFrame([[["Pruned", "Events"], "Other features", prun_rounded, prun_rounded_str],], columns=['Event', 'Feature', 'rounded', 'rounded_str'])
-    cell_data = cell_data[~np.logical_and(cell_data['Event'] == 'Pruned Events', cell_data['Feature'] == 'Pruned Events')]
+    filtered_cell_data = cell_data[~np.logical_and(cell_data['Event'] == 'Pruned Events', cell_data['Feature'] == 'Pruned Events')]
+
+    height = 225
+    width = 200
 
     c = alt.Chart().encode(
         y=alt.Y('Feature', axis=alt.Axis(domain=False, labelFontSize=15, title=None), sort=sort_features),
     )
 
-    height = 225
-    width = 200
     a = c.mark_rect().encode(
         x=alt.X('Event', axis=alt.Axis(titleFontSize=15), sort=sort_events),
         color=alt.Color('rounded', title=None,
@@ -90,33 +89,42 @@ def plot_cell_level(cell_data: pd.DataFrame,
             text='rounded_str',
     )
 
-    cell_plot_main = alt.layer(a, b, data=cell_data).properties(
+    cell_plot = alt.layer(a, b, data=filtered_cell_data).properties(
         width=160,
         height=height
     )
 
-    c = alt.Chart().encode(
-        y=alt.Y('Feature', axis=alt.Axis(labels=False, domain=False, title=None)),
-    )
+    if 'Pruned Events' in np.unique(cell_data['Event'].values):
+        # isolate the pruned contribution
+        df_prun = cell_data[np.logical_and(cell_data['Event'] == 'Pruned Events',cell_data['Feature'] == 'Pruned Events')]
+        assert df_prun.shape == (1, 5)
+        prun_rounded_str = df_prun.iloc[0]['rounded_str']
+        prun_rounded = df_prun.iloc[0]['rounded']
+        df_prun = pd.DataFrame([[["Pruned", "Events"], "Other features", prun_rounded, prun_rounded_str], ],
+                               columns=['Event', 'Feature', 'rounded', 'rounded_str'])
 
-    a = c.mark_rect().encode(
-        x=alt.X('Event', axis=alt.Axis(titleFontSize=15)),
-        color=alt.Color('rounded', title=None, legend=None,
-                        scale=alt.Scale(domain=[-.5, .5], range=c_range))
-    )
-    b = c.mark_text(align='right', dx=18, baseline='middle', fontSize=15,
-                    color='#798184').encode(
-        x=alt.X('Event',
-                axis=alt.Axis(labelOffset=24, labelPadding=30, orient="top",
-                              title=None, domain=False, labelAngle=0,
-                              labelFontSize=15, )),
-        text='rounded_str',
-    )
+        c = alt.Chart().encode(y=alt.Y('Feature',
+                                       axis=alt.Axis(labels=False, domain=False,
+                                                     title=None)), )
 
-    cell_plot_prun = alt.layer(a, b, data=df_prun).properties(
-        width=width / 3,
-        height=height
-    )
+        a = c.mark_rect().encode(
+            x=alt.X('Event', axis=alt.Axis(titleFontSize=15)),
+            color=alt.Color('rounded', title=None, legend=None,
+                            scale=alt.Scale(domain=[-.5, .5], range=c_range))
+        )
+        b = c.mark_text(align='right', dx=18, baseline='middle', fontSize=15,
+                        color='#798184').encode(
+            x=alt.X('Event',
+                    axis=alt.Axis(labelOffset=24, labelPadding=30, orient="top",
+                                  title=None, domain=False, labelAngle=0,
+                                  labelFontSize=15, )),
+            text='rounded_str',
+        )
 
-    cell_plot = alt.hconcat(cell_plot_prun, cell_plot_main).resolve_scale(color='independent')
+        cell_plot_prun = alt.layer(a, b, data=df_prun).properties(
+            width=width / 3,
+            height=height
+        )
+
+        cell_plot = alt.hconcat(cell_plot_prun, cell_plot).resolve_scale(color='independent')
     return cell_plot

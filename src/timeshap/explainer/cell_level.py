@@ -227,19 +227,23 @@ def cell_level(f: Callable,
             i += 1
             ret_df_data += [row]
 
-    for event in names[0]:
-        row = [event, 'Other Features', explanation[i]]
-        i += 1
-        ret_df_data += [row]
+    if explainer.special_cells[0]:
+        for event in names[0]:
+            row = [event, 'Other Features', explanation[i]]
+            i += 1
+            ret_df_data += [row]
 
-    for feat in names[1]:
-        row = ['Other Events', feat, explanation[i]]
-        i += 1
-        ret_df_data += [row]
+    if explainer.special_cells[1]:
+        for feat in names[1]:
+            row = ['Other Events', feat, explanation[i]]
+            i += 1
+            ret_df_data += [row]
 
-    ret_df_data += [["Other Events", "Other Features", explanation[i]]]
-    i += 1
-    ret_df_data += [["Pruned Events", "Pruned Events", explanation[i]]]
+    if explainer.special_cells[2]:
+        ret_df_data += [["Other Events", "Other Features", explanation[i]]]
+        i += 1
+    if explainer.special_cells[3]:
+        ret_df_data += [["Pruned Events", "Pruned Events", explanation[i]]]
     return pd.DataFrame(ret_df_data, columns=['Event', 'Feature',
                                               'Shapley Value']).sort_values(
         'Shapley Value', ascending=False)
@@ -296,7 +300,7 @@ def local_cell_level(f: Callable[[np.ndarray], np.ndarray],
     """
 
     if cell_dict.get("path") is None or not os.path.exists(cell_dict.get("path")):
-        print("No path to feature data provided. Calculating data")
+        print("No path to cell data provided. Calculating data")
         cell_data = cell_level(f, data, baseline, event_data, feat_data, cell_dict.pop("rs"), cell_dict.pop("nsamples"), cell_dict, pruned_idx)
         if cell_dict.get("path") is not None:
             # create directory

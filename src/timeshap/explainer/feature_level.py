@@ -19,6 +19,7 @@ from timeshap.explainer.kernel import TimeShapKernel
 import os
 import csv
 from pathlib import Path
+import copy
 
 
 def feature_level(f: Callable,
@@ -71,9 +72,12 @@ def feature_level(f: Callable,
     if model_feats is None:
         model_feats = ["Feature {}".format(i) for i in np.arange(data.shape[2])]
 
-    model_feats_w_hs = model_feats + ["Pruned Events"]
+    model_feats = copy.deepcopy(model_feats)
+    if pruned_idx > 0:
+        model_feats += ["Pruned Events"]
+
     ret_data = []
-    for exp, feature in zip(shap_values, model_feats_w_hs):
+    for exp, feature in zip(shap_values, model_feats):
         ret_data += [[random_seed, nsamples, feature, exp]]
     return pd.DataFrame(ret_data, columns=['Random seed', 'NSamples', 'Feature', 'Shapley Value'])
 

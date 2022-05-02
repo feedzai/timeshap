@@ -98,21 +98,55 @@ def time_shap_convert_to_data(val, mode, pruning_idx, varying=None):
     if type(val) == np.ndarray:
         if mode == 'event':
             event_names = ["Event: {}".format(i) for i in np.arange(val.shape[1], pruning_idx, -1)]
-            event_names += ["Pruned Events"]
+            if pruning_idx > 0:
+                event_names += ["Pruned Events"]
             return TimeShapDenseData(val, mode, event_names)
         elif mode == 'feature':
             event_names = ["Feat: {}".format(i) for i in np.arange(val.shape[2])]
-            event_names += ["Pruned Events"]
+            if pruning_idx > 0:
+                event_names += ["Pruned Events"]
             return TimeShapDenseData(val, mode, event_names)
         elif mode == 'cell':
             group_names = []
             for event_idx in varying[0]:
                 for feat_idx in varying[1]:
                     group_names += ["({}, {})".format(event_idx, feat_idx)]
-            group_names += ["Other on event {}".format(x) for x in varying[0]]
-            group_names += ["Other on feature {}".format(x) for x in varying[1]]
-            group_names += ["Pruned Events", "Pruned Events"]
-            return TimeShapDenseData(val, mode, group_names)
+
+            used_index = 0
+            special_names = []
+            # check if there are pruned cells
+            if pruning_idx > 0:
+                special_names += ["Pruned Cells"]
+                used_index += 1
+                pruned_events = used_index
+            else:
+                pruned_events = False
+
+            # check if there are other cells
+            if not(len(varying[0]) == val.shape[1]-pruning_idx or len(varying[1]) == val.shape[2]):
+                special_names += ["Other Cells"]
+                used_index += 1
+                all_other = used_index
+            else:
+                all_other = False
+
+            if len(varying[0]) < val.shape[1]-pruning_idx:
+                special_names += reversed(["Other events on feature {}".format(x) for x in varying[1]])
+                used_index += 1
+                other_event_rel_feat = used_index
+            else:
+                other_event_rel_feat = False
+
+            if len(varying[1]) < val.shape[2]:
+                special_names += reversed(["Other feats on event {}".format(x) for x in varying[0]])
+                used_index += 1
+                other_feat_rel_event = used_index
+            else:
+                other_feat_rel_event = False
+
+            group_names += reversed(special_names)
+
+            return TimeShapDenseData(val, mode, group_names), [other_feat_rel_event, other_event_rel_feat, all_other, pruned_events]
         elif mode == 'pruning':
             return TimeShapDenseData(val, mode, ["x", "hidden"])
         else:

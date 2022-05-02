@@ -141,7 +141,10 @@ class TimeShapKernel(Kernel):
         sequence = np.tile(self.background, (X.shape[1], 1))
         sequence = np.expand_dims(sequence.copy(), axis=0)
 
-        self.data = time_shap_convert_to_data(sequence, self.mode, self.pruning_idx, self.varying)
+        if self.mode == 'cell':
+            self.data, self.special_cells = time_shap_convert_to_data(sequence, self.mode, self.pruning_idx, self.varying)
+        else:
+            self.data = time_shap_convert_to_data(sequence, self.mode, self.pruning_idx, self.varying)
 
         model_null, returns_hs = time_shap_match_model_to_data(self.model, self.data)
         self.returns_hs = returns_hs
@@ -221,10 +224,10 @@ class TimeShapKernel(Kernel):
         attribute of the explainer). For models with vector outputs this returns a list
         of such matrices, one for each output.
         """
-        if pruning_idx is None and self.mode == "pruning":
-            pruning_idx = 1
-        elif pruning_idx is None:
-            pruning_idx = X.shape[1]
+        if self.mode == "pruning":
+            assert pruning_idx is not None
+        else:
+            assert pruning_idx < X.shape[1], "Pruning idx must be smaller than the sequence length. If not all events are pruned"
         assert pruning_idx % 1 == 0, "Pruning idx must be integer"
         self.pruning_idx = int(pruning_idx)
 
@@ -267,8 +270,12 @@ class TimeShapKernel(Kernel):
         elif self.mode == 'pruning':
             self.varyingInds = [0, 1]
         elif self.mode == "feature":
-            self.varyingInds = self.varying_groups(instance.x, self.data.groups_size-1)
-            self.varyingInds = np.concatenate((self.varyingInds, np.array([self.data.groups_size-1])))
+            if self.pruning_idx > 0:
+                self.varyingInds = self.varying_groups(instance.x, self.data.groups_size - 1)
+                # add an index for pruned events
+                self.varyingInds = np.concatenate((self.varyingInds, np.array([self.data.groups_size - 1])))
+            else:
+                self.varyingInds = self.varying_groups(instance.x, self.data.groups_size)
         elif self.mode == 'cell':
             self.varyingInds = np.arange(len(self.data.groups))
         else:
@@ -280,10 +287,17 @@ class TimeShapKernel(Kernel):
         else:
             if self.mode in ['event']:
                 self.varyingFeatureGroups = self.varyingInds
-                self.M = len(self.varyingFeatureGroups) + 1
+                self.M = len(self.varyingFeatureGroups)
+                if self.pruning_idx > 0:
+                    self.M += 1
             elif self.mode in ['feature']:
-                self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds[:-1]]
-                self.M = len(self.varyingFeatureGroups) + 1
+                if self.pruning_idx > 0:
+                    self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds[:-1]]
+                else:
+                    self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
+                self.M = len(self.varyingFeatureGroups)
+                if self.pruning_idx > 0:
+                    self.M += 1
             else:
                 self.varyingFeatureGroups = [self.data.groups[i] for i in self.varyingInds]
                 self.M = len(self.varyingFeatureGroups)
@@ -578,7 +592,7 @@ class TimeShapKernel(Kernel):
             feats_by_event[event] = cells_to_preturb[cells_to_preturb[:, 0] == event][:, 1]
 
         # BACKGROUND IS ACTIVE
-        if mask[-1]:
+        if self.special_cells[3] and mask[-self.special_cells[3]]:
             # in case self.pruning_idx == sequence length, we dont prune anything.
             if not self.pruning_idx == self.S:
                 if self.returns_hs:
@@ -588,7 +602,7 @@ class TimeShapKernel(Kernel):
                     self.synth_data[offset:offset + self.N, :self.pruning_idx, :] = evaluation_data
 
         # other cells are active (no relevant events or feats)
-        if mask[-2]:
+        if self.special_cells[2] and mask[-self.special_cells[2]]:
             other_events = [x for x in np.arange(self.pruning_idx, x.shape[1]) if x not in relevent_events]
             other_feats = [x for x in range(x.shape[2]) if x not in relevent_feats]
 
@@ -598,26 +612,30 @@ class TimeShapKernel(Kernel):
                     event = event - self.pruning_idx
                 self.synth_data[offset:offset + self.N, event, other_feats] = evaluation_data
 
-        # other feats in relevant events
-        nr_cells = self.cell_idx_keys.shape[0]
-        perturb_events = relevent_events[mask[nr_cells: nr_cells + len(self.varying[0])]]
-        for event in perturb_events:
-            other_feats = [x for x in range(x.shape[2]) if x not in relevent_feats]
-            evaluation_data = x[0:1, event, other_feats]
-            if self.returns_hs:
-                event = event - self.pruning_idx
-            self.synth_data[offset:offset + self.N, event, other_feats] = evaluation_data
+        mask_pointer = self.cell_idx_keys.shape[0]
+        if self.special_cells[0]:
+            # other feats in relevant events
+            perturb_events = relevent_events[mask[mask_pointer: mask_pointer + len(self.varying[0])]]
+            mask_pointer += len(self.varying[0])
+            for event in perturb_events:
+                other_feats = [x for x in range(x.shape[2]) if x not in relevent_feats]
+                evaluation_data = x[0:1, event, other_feats]
+                if self.returns_hs:
+                    event = event - self.pruning_idx
+                self.synth_data[offset:offset + self.N, event, other_feats] = evaluation_data
 
-        # other events in relevant feats
-        perturb_feats = relevent_feats[mask[nr_cells + len(self.varying[0]):-2]]
-        other_events = [x for x in np.arange(self.pruning_idx, x.shape[1]) if x not in relevent_events]
-        for event in other_events:
-            evaluation_data = x[0:1, event, perturb_feats]
-            if self.returns_hs:
-                event = event - self.pruning_idx
-            self.synth_data[offset:offset + self.N, event, perturb_feats] = evaluation_data
+        if self.special_cells[1]:
+            # other events in relevant feats
+            perturb_feats = relevent_feats[mask[mask_pointer: mask_pointer + len(self.varying[1])]]
+            mask_pointer += len(self.varying[1])
+            other_events = [x for x in np.arange(self.pruning_idx, x.shape[1]) if x not in relevent_events]
+            for event in other_events:
+                evaluation_data = x[0:1, event, perturb_feats]
+                if self.returns_hs:
+                    event = event - self.pruning_idx
+                self.synth_data[offset:offset + self.N, event, perturb_feats] = evaluation_data
 
-        # active individual cells
+        # activate individual cells
         for event, feats in feats_by_event.items():
             evaluation_data = x[0:1, event, feats]
             if self.returns_hs:
@@ -641,8 +659,8 @@ class TimeShapKernel(Kernel):
     def event_add_sample(self, x, m):
         offset = self.nsamplesAdded * self.N
         mask = m == 1.0
-        #BACKGROUND IS ACTIVE
-        if mask[-1]:
+        # there is a background and it is active
+        if self.pruning_idx > 0 and mask[-1]:
             # in case self.pruning_idx == sequence length, we dont prune anything.
             if not self.pruning_idx == self.S:
                 if self.returns_hs:
@@ -652,8 +670,12 @@ class TimeShapKernel(Kernel):
                     # in case of not using hidden state optimization, we need to set the whole background to the original sequence
                     evaluation_data = x[0:1, :self.pruning_idx, :]
                     self.synth_data[offset:offset + self.N, :self.pruning_idx, :] = evaluation_data
+        if self.pruning_idx > 0:
+            # there is a background, so the last position of the mask is for it
+            groups = self.varyingFeatureGroups[mask[:-1]]
+        else:
+            groups = self.varyingFeatureGroups[mask]
 
-        groups = self.varyingFeatureGroups[mask[:-1]]
         evaluation_data = x[0:1, groups, :]
         if self.returns_hs:
             # re-align indexes to the truncated sequence
@@ -664,7 +686,7 @@ class TimeShapKernel(Kernel):
         offset = self.nsamplesAdded * self.N
         mask = m == 1.0
         #BACKGROUND IS ACTIVE
-        if mask[-1]:
+        if self.pruning_idx > 0 and mask[-1]:
             # in case self.pruning_idx == sequence length, we dont prune anything.
             if not self.pruning_idx == self.S:
                 if self.returns_hs:
@@ -673,7 +695,11 @@ class TimeShapKernel(Kernel):
                     evaluation_data = x[0:1, :self.pruning_idx, :]
                     self.synth_data[offset:offset + self.N, :self.pruning_idx,:] = evaluation_data
 
-        groups = self.varyingFeatureGroups[mask[:-1]]
+        if self.pruning_idx > 0:
+            # there is a background, so the last position of the mask is for it
+            groups = self.varyingFeatureGroups[mask[:-1]]
+        else:
+            groups = self.varyingFeatureGroups[mask]
         evaluation_data = x[0:1, self.pruning_idx:, groups]
         if self.returns_hs:
             self.synth_data[offset:offset+self.N, :, groups] = evaluation_data
