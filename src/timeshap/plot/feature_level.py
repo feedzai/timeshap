@@ -91,7 +91,7 @@ def plot_global_feat(feat_data: pd.DataFrame,
     avg_df = feat_data.groupby('Feature').mean()['Shapley Value']
     if threshold is None and len(avg_df) >= top_x_feats:
         sorted_series = avg_df.abs().sort_values(ascending=False)
-        threshold = sorted_series.iloc[top_x_feats]
+        threshold = sorted_series.iloc[top_x_feats-1]
     if threshold:
         avg_df = avg_df[np.logical_or(avg_df <= -threshold, avg_df >= threshold)]
     feat_data = feat_data[feat_data['Feature'].isin(avg_df.index)][['Shapley Value', 'Feature']]
@@ -105,7 +105,7 @@ def plot_global_feat(feat_data: pd.DataFrame,
     for index, value in avg_df.items():
         if index == '(...)':
             feat_data = feat_data.append(
-                {'Feature': index, 'Shapley Value': -0.6, 'type': 'Mean'},
+                {'Feature': index, 'Shapley Value': None, 'type': 'Mean'},
                 ignore_index=True)
         else:
             feat_data = feat_data.append(
@@ -116,6 +116,7 @@ def plot_global_feat(feat_data: pd.DataFrame,
     if plot_features:
         plot_features = copy.deepcopy(plot_features)
         plot_features['Pruned Events'] = 'Pruned Events'
+        plot_features['(...)'] = '(...)'
         feat_data['Feature'] = feat_data['Feature'].apply(lambda x: plot_features[x])
         sort_features = [plot_features[x] for x in sort_features]
 
