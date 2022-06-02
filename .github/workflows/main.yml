@@ -9,7 +9,7 @@ on:
     branches:
       - main
     paths:
-      - "timeshap/version.py"
+      - "src/timeshap/version.py"
 
 jobs:
   build-and-publish:
