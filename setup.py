@@ -49,7 +49,10 @@ setup(
     version=__version__,
     description="KernelSHAP adaptation for recurrent models.",
     keywords=['explainability', 'TimeShap'],
-
+    
+    long_description=(README_PATH).read_text(),
+    long_description_content_type="text/markdown",
+    
     author="Feedzai",
     url="https://github.com/feedzai/timeshap",
 
