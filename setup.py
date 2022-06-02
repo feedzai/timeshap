@@ -19,8 +19,11 @@ def stream_requirements(fd):
 # ---------------------------------------------------------------------------- #
 
 ROOT_PATH = Path(__file__).parent
+print(ROOT_PATH)
 README_PATH = ROOT_PATH / 'README.md'
+print(README_PATH)
 REQUIREMENTS_PATH = ROOT_PATH / 'requirements' / 'main.txt'
+print(REQUIREMENTS_PATH)
 # REQUIREMENTS_TEST_PATH = ROOT_PATH / 'requirements' / 'test.txt'
 
 with REQUIREMENTS_PATH.open() as requirements_file:
