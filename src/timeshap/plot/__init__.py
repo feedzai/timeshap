@@ -12,7 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .timeshap_theme import timeshap_theme
 from .pruning import *
 from .event_level import *
 from .feature_level import *

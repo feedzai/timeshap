@@ -15,18 +15,28 @@ Links to the paper [here](https://arxiv.org/abs/2012.00073), and to the video pr
 
 
 ## Install TimeSHAP
+
+##### Via Pip
+```
+pip install timeshap
+```
+
+##### Via Github
 Clone the repository into a local directory using:
 ```
 git clone https://github.com/feedzai/timeshap.git
 ```
 
-Install the package using pip:
+Move into the cloned repo and install the package:
 
 ```
-pip install timeshap
+cd timeshap
+pip install .
 ```
 
-To test your installation, start a Python session in your terminal using
+
+##### Test your installation
+Start a Python session in your terminal using
 
 ```
 python
