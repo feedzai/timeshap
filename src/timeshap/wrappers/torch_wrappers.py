@@ -76,7 +76,7 @@ class TorchModelWrapper(TimeSHAPWrapper):
     def predict_last_hs(self,
                      sequences: np.ndarray,
                      hidden_states: np.ndarray = None,
-                     ) -> Tuple[np.ndarray, np.ndarray]:
+                     ) -> Tuple[np.ndarray, Tuple[np.ndarray]]:
         sequences = self.prepare_input(sequences)
         device = next(self.model.parameters()).device
 
@@ -89,7 +89,10 @@ class TorchModelWrapper(TimeSHAPWrapper):
                 self.model.train(False)
                 data_tensor = torch.from_numpy(sequences.copy()).float().to(device)
                 if hidden_states is not None:
-                    hidden_states_tensor = torch.from_numpy(hidden_states)
+                    if isinstance(hidden_states, tuple):
+                        hidden_states_tensor = tuple(torch.from_numpy(x).float().to(device) for x in hidden_states)
+                    else:
+                        hidden_states_tensor = torch.from_numpy(hidden_states).float().to(device)
                     predictions = self.model(data_tensor, hidden_states_tensor)
                 else:
                     predictions = self.model(data_tensor)
@@ -98,7 +101,10 @@ class TorchModelWrapper(TimeSHAPWrapper):
                     return predictions.cpu().numpy()
                 elif isinstance(predictions, tuple) and len(predictions) == 2:
                     predictions, hs = predictions
-                    return predictions.cpu().numpy(), hs.cpu().numpy()
+                    if isinstance(hs, tuple):
+                        return predictions.cpu().numpy(), tuple(x.cpu().numpy() for x in hs)
+                    else:
+                        return predictions.cpu().numpy(), hs.cpu().numpy()
                 else:
                     raise NotImplementedError(
                         "Only models that return predictions or predictions + hidden states are supported for now.")
@@ -114,7 +120,10 @@ class TorchModelWrapper(TimeSHAPWrapper):
                     self.model.train(False)
                     batch_tensor = batch_tensor.float().to(device)
                     if hidden_states is not None:
-                        batch_hs_tensor = torch.from_numpy(hidden_states[:, i:(i + batch_size), :].copy()).float().to(device)
+                        if isinstance(hidden_states, tuple):
+                            batch_hs_tensor = tuple(torch.from_numpy(x[:, i:(i + batch_size), :].copy()).float().to(device).float().to(device) for x in hidden_states)
+                        else:
+                            batch_hs_tensor = torch.from_numpy(hidden_states[:, i:(i + batch_size), :].copy()).float().to(device)
                         predictions = self.model(batch_tensor, batch_hs_tensor)
                     else:
                         predictions = self.model(batch_tensor)
@@ -124,8 +133,16 @@ class TorchModelWrapper(TimeSHAPWrapper):
                         predictions = predictions.cpu()
                     elif isinstance(predictions, tuple) and len(predictions) == 2:
                         predictions, hs = predictions
-                        predictions, hs = predictions.cpu(), hs.cpu()
-                        return_hs.append(hs.numpy())
+                        predictions = predictions.cpu()
+                        if isinstance(hs, tuple):
+                            if return_hs == []:
+                                return_hs = [[] for x in hs]
+
+                            for ith, ith_layer_hs in enumerate(hs):
+                                return_hs[ith].append(ith_layer_hs.cpu().numpy())
+                        else:
+                            hs = hs.cpu().numpy()
+                            return_hs.append(hs)
                     else:
                         raise NotImplementedError(
                             "Only models that return predictions or predictions + hidden states are supported for now.")
@@ -134,4 +151,8 @@ class TorchModelWrapper(TimeSHAPWrapper):
             if hs is None:
                 return np.concatenate(tuple(return_scores), axis=0)
 
-            return np.concatenate(tuple(return_scores), axis=0), np.concatenate(tuple(return_hs), axis=1)
+            if isinstance(hs, tuple):
+                return_hs = tuple(np.concatenate(tuple(x), axis=1) for x in return_hs)
+            else:
+                return_hs = np.concatenate(tuple(return_hs), axis=1)
+            return np.concatenate(tuple(return_scores), axis=0), return_hs

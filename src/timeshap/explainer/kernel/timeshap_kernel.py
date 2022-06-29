@@ -44,6 +44,7 @@ import scipy as sp
 import logging
 import copy
 import itertools
+from typing import Tuple
 
 from timeshap.utils.timeshap_legacy import time_shap_match_instance_to_data, \
     time_shap_match_model_to_data, time_shap_convert_to_data, TimeShapDenseData
@@ -152,11 +153,19 @@ class TimeShapKernel(Kernel):
         if not self.mode == 'pruning' and self.returns_hs:
             if self.pruning_idx == 0:
                 _, example_hs = self.model.f(X[:, -1:, :])
-                self.instance_hs = np.zeros_like(example_hs)
-                self.background_hs = np.zeros_like(example_hs)
+                if isinstance(example_hs, tuple):
+                    self.instance_hs = tuple(np.zeros_like(example_hs[i]) for i, x in enumerate(example_hs))
+                    self.background_hs = tuple(np.zeros_like(example_hs[i]) for i, x in enumerate(example_hs))
+                else:
+                    self.instance_hs = np.zeros_like(example_hs)
+                    self.background_hs = np.zeros_like(example_hs)
             else:
                 _, self.background_hs = self.model.f(sequence[:, :self.pruning_idx, :])
                 _, self.instance_hs = self.model.f(X[:, :self.pruning_idx, :])
+                assert isinstance(self.background_hs, (np.ndarray, tuple)), "Hidden states are required to be numpy arrays or tuple "
+                if isinstance(self.background_hs, tuple):
+                    for x in self.background_hs:
+                        assert isinstance(x, np.ndarray)
         # enforce our current input type limitations
         assert isinstance(self.data, TimeShapDenseData), \
             "Shap explainer only supports the DenseData input currently."
@@ -549,7 +558,11 @@ class TimeShapKernel(Kernel):
         else:
             if self.returns_hs and self.mode != 'pruning':
                 self.synth_data = np.tile(self.data.data[:, self.pruning_idx:, :], (self.nsamples, 1, 1))
-                self.synth_hidden_states = np.tile(self.background_hs, (1, self.nsamples, 1))
+                if isinstance(self.background_hs, tuple):
+                    self.synth_hidden_states = tuple(np.tile(x, (1, self.nsamples, 1)) for x in self.background_hs)
+                else:
+                    self.synth_hidden_states = np.tile(self.background_hs, (1, self.nsamples, 1))
+
             else:
                 self.synth_data = np.tile(self.data.data, (self.nsamples, 1, 1))
 
@@ -596,7 +609,11 @@ class TimeShapKernel(Kernel):
             # in case self.pruning_idx == sequence length, we dont prune anything.
             if not self.pruning_idx == self.S:
                 if self.returns_hs:
-                    self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
+                    if isinstance(self.synth_hidden_states, tuple):
+                        for i, i_layer_state in enumerate(self.synth_hidden_states):
+                            i_layer_state[:, offset:offset + self.N,:] = self.instance_hs[i]
+                    else:
+                        self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
                 else:
                     evaluation_data = x[0:1, :self.pruning_idx, :]
                     self.synth_data[offset:offset + self.N, :self.pruning_idx, :] = evaluation_data
@@ -665,7 +682,11 @@ class TimeShapKernel(Kernel):
             if not self.pruning_idx == self.S:
                 if self.returns_hs:
                     # in case of using hidden state optimization, the background is the instance one
-                    self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
+                    if isinstance(self.synth_hidden_states, tuple):
+                        for i, i_layer_state in enumerate(self.synth_hidden_states):
+                            i_layer_state[:, offset:offset + self.N,:] = self.instance_hs[i]
+                    else:
+                        self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
                 else:
                     # in case of not using hidden state optimization, we need to set the whole background to the original sequence
                     evaluation_data = x[0:1, :self.pruning_idx, :]
@@ -690,7 +711,11 @@ class TimeShapKernel(Kernel):
             # in case self.pruning_idx == sequence length, we dont prune anything.
             if not self.pruning_idx == self.S:
                 if self.returns_hs:
-                    self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
+                    if isinstance(self.synth_hidden_states, tuple):
+                        for i, i_layer_state in enumerate(self.synth_hidden_states):
+                            i_layer_state[:, offset:offset + self.N,:] = self.instance_hs[i]
+                    else:
+                        self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
                 else:
                     evaluation_data = x[0:1, :self.pruning_idx, :]
                     self.synth_data[offset:offset + self.N, :self.pruning_idx,:] = evaluation_data
@@ -712,7 +737,11 @@ class TimeShapKernel(Kernel):
         data = self.synth_data[self.nsamplesRun * self.N:self.nsamplesAdded * self.N, :, :]
 
         if not self.mode == 'pruning' and self.returns_hs:
-            hidden_sates = self.synth_hidden_states[:, self.nsamplesRun * self.N: self.nsamplesAdded * self.N,:]
+            if isinstance(self.synth_hidden_states, tuple):
+                hidden_sates = tuple(x[:, self.nsamplesRun * self.N: self.nsamplesAdded * self.N,:] for x in self.synth_hidden_states)
+            else:
+                hidden_sates = self.synth_hidden_states[:, self.nsamplesRun * self.N: self.nsamplesAdded * self.N,:]
+
             modelOut, _ = self.model.f(data, hidden_sates)
         elif self.returns_hs:
             modelOut, _ = self.model.f(data)
