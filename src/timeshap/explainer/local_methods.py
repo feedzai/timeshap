@@ -36,9 +36,9 @@ def validate_local_input(f: Callable[[np.ndarray], np.ndarray],
         data_cols = set(data.columns)
         if model_features:
             assert set(model_features).issubset(data_cols), "When providing model features, these should be on the given DataFrame"
-        if entity_col:
+        if entity_col is not None:
             assert set(entity_col).issubset(data_cols), "When providing entity feature, these should be on the given DataFrame"
-        if time_col:
+        if time_col is not None:
             assert set(time_col).issubset(data_cols), "When providing time feature, these should be on the given DataFrame"
     else:
         assert len(data.shape) == 3, "Provided data must be an numpy array with 3 dimensions"
@@ -127,7 +127,7 @@ def local_report(f: Callable[[np.ndarray], np.ndarray],
     validate_local_input(f, data, pruning_dict, event_dict, feature_dict, model_features, entity_col, time_col)
     # deals with given date being a DataFrame
     if isinstance(data, pd.DataFrame):
-        if time_col:
+        if time_col is not None:
             data = data.sort_values(time_col)
         data = data[model_features]
         data = np.expand_dims(data.to_numpy().copy(), axis=0)

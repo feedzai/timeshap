@@ -20,6 +20,9 @@ import os
 import re
 import csv
 from pathlib import Path
+from timeshap.utils import convert_to_indexes, convert_data_to_3d
+from timeshap.explainer import temp_coalition_pruning
+from timeshap.utils import get_tolerances_to_test
 
 
 def event_level(f: Callable,
@@ -120,7 +123,7 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
     pd.DataFrame
     """
     if event_dict.get("path") is None or not os.path.exists(event_dict.get("path")):
-        print("No path to event data provided. Calculating data")
+        #print("No path to event data provided. Calculating data")
         event_data = event_level(f, data, baseline, pruned_idx, event_dict.get("rs"), event_dict.get("nsamples"))
         if event_dict.get("path") is not None:
             # create directory
@@ -144,14 +147,50 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
     return event_data
 
 
+def verify_event_dict(event_dict: dict):
+    if event_dict.get('path'):
+        assert isinstance(event_dict.get('path'), str), "Provided path must be a string"
+
+    if event_dict.get('rs', False):
+        if isinstance(event_dict.get('rs'), int):
+            event_dict['rs'] = [event_dict.get('rs')]
+        elif isinstance(event_dict.get('rs'), list):
+            assert np.array([isinstance(x, int) for x in event_dict.get('rs')]).all(), "All provided random seeds must be ints."
+        else:
+            raise ValueError("Unsuported format of random seeds(s). Please provide one seed or a list of them.")
+    else:
+        print("No random seed provided for event-level explanations. Using default: 42")
+        event_dict['rs'] = [42]
+
+    if event_dict.get('nsamples', False):
+        if isinstance(event_dict.get('nsamples'), int):
+            event_dict['nsamples'] = [event_dict.get('nsamples')]
+        elif isinstance(event_dict.get('nsamples'), list):
+            assert np.array([isinstance(x, int) for x in event_dict.get('nsamples')]).all(), "All provided nsamples must be ints."
+        else:
+            raise ValueError("Unsuported format of nsamples. Please provide value or a list of them.")
+    else:
+        print("No nsamples provided for event-level explanations. Using default: 32000")
+        event_dict['nsamples'] = [32000]
+
+    if event_dict.get('tol', False):
+        tolerances = event_dict.get('tol')
+        if isinstance(tolerances, float):
+            event_dict['tol'] = [tolerances]
+        elif isinstance(tolerances, list):
+            assert np.array([isinstance(x, float) for x in tolerances]).all(), "All provided tolerances must be floats."
+
+
 def event_explain_all(f: Callable,
-                      data: pd.DataFrame,
-                      entity_col: str,
-                      baseline: Union[pd.DataFrame, np.ndarray],
+                      data: Union[List[np.ndarray], pd.DataFrame, np.array],
                       event_dict: dict,
-                      pruning_data: pd.DataFrame,
-                      model_features: List[str],
-                      time_col: str = None,
+                      pruning_data: pd.DataFrame = None,
+                      baseline: Union[pd.DataFrame, np.array] = None,
+                      model_features: List[Union[int, str]] = None,
+                      schema: List[str] = None,
+                      entity_col: Union[int, str] = None,
+                      time_col: Union[int, str] = None,
+                      append_to_files: bool = False,
                       verbose: bool = False,
                       ) -> pd.DataFrame:
     """Calculates event level explanations for all entities on the provided
@@ -196,76 +235,96 @@ def event_explain_all(f: Callable,
     -------
     pd.DataFrame
     """
+    if schema is None and isinstance(data, pd.DataFrame):
+        schema = list(data.columns)
+    verify_event_dict(event_dict)
     file_path = event_dict.get('path')
-    tolerances_to_calc = np.unique(pruning_data['Tolerance'].values)
     make_predictions = True
     event_data = None
-    if os.path.exists(file_path):
-        conditions = []
-        necessary_entities = set(np.unique(data[entity_col].values))
+
+    tolerances_to_calc = get_tolerances_to_test(pruning_data, event_dict, entity_col)
+
+    if file_path is not None and os.path.exists(file_path) and not append_to_files:
         event_data = pd.read_csv(file_path)
-        present_entities = set(np.unique(event_data[entity_col].values))
-        if necessary_entities.issubset(present_entities):
-            conditions.append(True)
-            event_data = event_data[event_data[entity_col].isin(necessary_entities)]
+        make_predictions = False
 
-        necessary_tols = set(tolerances_to_calc)
-        loaded_csv = pd.read_csv(file_path)
-        present_tols = set(np.unique(loaded_csv['Tolerance'].values))
-        if necessary_tols.issubset(present_tols):
-            conditions.append(True)
-            event_data = event_data[event_data['Tolerance'].isin(necessary_tols)]
-
-        make_predictions = ~np.array(conditions).all()
+        # TODO resume explanations
+        # conditions = []
+        # necessary_entities = set(np.unique(data[entity_col].values))
+        # event_data = pd.read_csv(file_path)
+        # present_entities = set(np.unique(event_data[entity_col].values))
+        # if necessary_entities.issubset(present_entities):
+        #     conditions.append(True)
+        #     event_data = event_data[event_data[entity_col].isin(necessary_entities)]
+        #
+        # necessary_tols = set(tolerances_to_calc)
+        # loaded_csv = pd.read_csv(file_path)
+        # present_tols = set(np.unique(loaded_csv['Tolerance'].values))
+        # if necessary_tols.issubset(present_tols):
+        #     conditions.append(True)
+        #     event_data = event_data[event_data['Tolerance'].isin(necessary_tols)]
+        #
+        # make_predictions = ~np.array(conditions).all()
 
     if make_predictions:
         random_seeds = event_dict.get('rs')
-        if isinstance(random_seeds, int):
-            random_seeds = [random_seeds]
         nsamples = event_dict.get('nsamples')
-        if isinstance(nsamples, int):
-            nsamples = [nsamples]
+        names = ["Random Seed", "NSamples", "Event", "Shapley Value", "t (event index)", "Entity", 'Tolerance']
+
+        if file_path is not None:
+            if os.path.exists(file_path):
+                assert append_to_files, "The defined path for event explanations already exists and the append option is turned off. If you wish to append the explanations please use the flag `append_to_files`, otherwise change the provided path."
+            else:
+                if '/' in file_path:
+                    Path(file_path.rsplit("/", 1)[0]).mkdir(parents=True, exist_ok=True)
+                with open(file_path, 'w', newline='') as file:
+                    writer = csv.writer(file, delimiter=',')
+                    writer.writerow(names)
+
         if time_col is None:
             print("No time col provided, assuming dataset is ordered ascendingly by date")
 
-        names = ["Random Seed", "NSamples", "Event",  "Shapley Value", "t (event index)", entity_col, 'Tolerance']
-        # create directory
-        if '/' in file_path:
-            Path(file_path.rsplit("/", 1)[0]).mkdir(parents=True, exist_ok=True)
-        with open(file_path, 'w', newline='') as file:
-            writer = csv.writer(file, delimiter=',')
-            writer.writerow(names)
+        model_features_index, entity_col_index, time_col_index = convert_to_indexes(model_features, schema, entity_col, time_col)
+        data = convert_data_to_3d(data, entity_col_index, time_col_index)
 
+        ret_event_data = []
         for rs in random_seeds:
             for ns in nsamples:
-                for uuid in np.unique(data[entity_col].values):
+                for sequence in data:
+                    if entity_col is not None:
+                        entity = sequence[0, 0, entity_col_index]
+                    if model_features:
+                        sequence = sequence[:, :, model_features]
+                    sequence = sequence.astype(np.float64)
                     event_data = None
                     prev_pruning_idx = None
                     for tol in tolerances_to_calc:
-                        seq = data[data[entity_col] == uuid]
-                        if time_col:
-                            seq = seq.sort_values(time_col)
-                        seq = seq[model_features]
-                        seq = np.expand_dims(seq.to_numpy().copy(), axis=0)
                         if pruning_data is None:
-                            raise NotImplementedError
+                            #we need to perform the pruning on the fly
+                            coal_prun_idx, _ = temp_coalition_pruning(f, sequence, baseline, tol)
+                            pruning_idx = data.shape[1] + coal_prun_idx
                         else:
-                            instance = pruning_data[pruning_data[entity_col] == uuid]
+                            instance = pruning_data[pruning_data["Entity"] == entity]
                             pruning_idx = instance[instance['Tolerance'] == tol]['Pruning idx'].iloc[0]
-                            pruning_idx = seq.shape[1] + pruning_idx
-                            if prev_pruning_idx == pruning_idx:
-                                # we have already calculated this, let's use it from the last iteration
-                                event_data['Tolerance'] = tol
-                            else:
-                                local_event_dict = {'rs': rs, 'nsamples': ns}
-                                event_data = local_event(f, seq, local_event_dict, uuid, entity_col, baseline, pruning_idx)
-                                event_data['Event index'] = event_data['Feature'].apply(lambda x: 1 if x == 'Pruned Events' else -int(re.findall(r'\d+', x)[0])+1)
-                                event_data[entity_col] = uuid
-                                event_data['Tolerance'] = tol
-                                if file_path is not None:
-                                    with open(file_path, 'a', newline='') as file:
-                                        writer = csv.writer(file, delimiter=',')
-                                        writer.writerows(event_data.values)
-                            prev_pruning_idx = pruning_idx
-        event_data = pd.read_csv(file_path)
+                            pruning_idx = sequence.shape[1] + pruning_idx
+
+                        if prev_pruning_idx == pruning_idx:
+                            # we have already calculated this, let's use it from the last iteration
+                            event_data['Tolerance'] = tol
+                        else:
+                            local_event_dict = {'rs': rs, 'nsamples': ns}
+                            event_data = local_event(f, sequence, local_event_dict, entity, entity_col, baseline, pruning_idx)
+                            event_data['Event index'] = event_data['Feature'].apply(lambda x: 1 if x == 'Pruned Events' else -int(re.findall(r'\d+', x)[0])+1)
+                            event_data[entity_col] = entity
+                            event_data['Tolerance'] = tol
+
+                        if file_path is not None:
+                            with open(file_path, 'a', newline='') as file:
+                                writer = csv.writer(file, delimiter=',')
+                                writer.writerows(event_data.values)
+                        ret_event_data.append(event_data.values)
+                        prev_pruning_idx = pruning_idx
+
+        event_data = pd.DataFrame(np.concatenate(ret_event_data), columns=names)
+        event_data = event_data.astype({'NSamples': 'int', 'Random Seed': 'int', 'Tolerance': 'float', 'Shapley Value': 'float', 't (event index)': 'int'})
     return event_data

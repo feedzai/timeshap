@@ -300,8 +300,8 @@ def local_cell_level(f: Callable[[np.ndarray], np.ndarray],
     """
 
     if cell_dict.get("path") is None or not os.path.exists(cell_dict.get("path")):
-        print("No path to cell data provided. Calculating data")
-        cell_data = cell_level(f, data, baseline, event_data, feat_data, cell_dict.pop("rs"), cell_dict.pop("nsamples"), cell_dict, pruned_idx)
+        #print("No path to cell data provided. Calculating data")
+        cell_data = cell_level(f, data, baseline, event_data, feat_data, cell_dict.get("rs"), cell_dict.get("nsamples"), cell_dict, pruned_idx)
         if cell_dict.get("path") is not None:
             # create directory
             if '/' in cell_dict.get("path"):

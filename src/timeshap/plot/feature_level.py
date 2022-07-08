@@ -16,6 +16,7 @@ import pandas as pd
 import numpy as np
 import copy
 import altair as alt
+from timeshap.plot.utils import filter_dataset
 
 
 def plot_feat_barplot(feat_data: pd.DataFrame,
@@ -88,57 +89,77 @@ def plot_global_feat(feat_data: pd.DataFrame,
     plot_features: dict
         Dict containing mapping between model features and display features
     """
-    avg_df = feat_data.groupby('Feature').mean()['Shapley Value']
-    if threshold is None and len(avg_df) >= top_x_feats:
-        sorted_series = avg_df.abs().sort_values(ascending=False)
-        threshold = sorted_series.iloc[top_x_feats-1]
-    if threshold:
-        avg_df = avg_df[np.logical_or(avg_df <= -threshold, avg_df >= threshold)]
-    feat_data = feat_data[feat_data['Feature'].isin(avg_df.index)][['Shapley Value', 'Feature']]
+    def plot(feat_data, top_x_feats, threshold, plot_features):
+        avg_df = feat_data.groupby('Feature').mean()['Shapley Value']
+        if threshold is None and len(avg_df) >= top_x_feats:
+            sorted_series = avg_df.abs().sort_values(ascending=False)
+            threshold = sorted_series.iloc[top_x_feats-1]
+        if threshold:
+            avg_df = avg_df[np.logical_or(avg_df <= -threshold, avg_df >= threshold)]
+        feat_data = feat_data[feat_data['Feature'].isin(avg_df.index)][['Shapley Value', 'Feature']]
 
-    if threshold:
-        avg_df = avg_df.append(pd.Series([0], index=['(...)']))
-        #some prunning happened
-        feat_data = feat_data.append({'Feature': '(...)', 'Shapley Value': -0.6, }, ignore_index=True)
-    feat_data['type'] = 'Shapley Value'
+        if threshold:
+            avg_df = avg_df.append(pd.Series([0], index=['(...)']))
+            #some prunning happened
+            feat_data = feat_data.append({'Feature': '(...)', 'Shapley Value': -0.6, }, ignore_index=True)
+        feat_data['type'] = 'Shapley Value'
 
-    for index, value in avg_df.items():
-        if index == '(...)':
-            feat_data = feat_data.append(
-                {'Feature': index, 'Shapley Value': None, 'type': 'Mean'},
-                ignore_index=True)
-        else:
-            feat_data = feat_data.append(
-                {'Feature': index, 'Shapley Value': value, 'type': 'Mean'},
-                ignore_index=True)
+        for index, value in avg_df.items():
+            if index == '(...)':
+                feat_data = feat_data.append(
+                    {'Feature': index, 'Shapley Value': None, 'type': 'Mean'},
+                    ignore_index=True)
+            else:
+                feat_data = feat_data.append(
+                    {'Feature': index, 'Shapley Value': value, 'type': 'Mean'},
+                    ignore_index=True)
 
-    sort_features = list(avg_df.sort_values(ascending=False).index)
-    if plot_features:
-        plot_features = copy.deepcopy(plot_features)
-        plot_features['Pruned Events'] = 'Pruned Events'
-        plot_features['(...)'] = '(...)'
-        feat_data['Feature'] = feat_data['Feature'].apply(lambda x: plot_features[x])
-        sort_features = [plot_features[x] for x in sort_features]
+        sort_features = list(avg_df.sort_values(ascending=False).index)
+        if plot_features:
+            plot_features = copy.deepcopy(plot_features)
+            plot_features['Pruned Events'] = 'Pruned Events'
+            plot_features['(...)'] = '(...)'
+            feat_data['Feature'] = feat_data['Feature'].apply(lambda x: plot_features[x])
+            sort_features = [plot_features[x] for x in sort_features]
 
-    global_feats_plot = alt.Chart(feat_data).mark_point(stroke='white',
-                                                         strokeWidth=.6).encode(
-        x=alt.X('Shapley Value', axis=alt.Axis(title='Shapley Value', grid=True),
-                scale=alt.Scale(domain=[-0.2, 0.6])),
-        y=alt.Y('Feature:O',
-                sort=sort_features,
-                axis=alt.Axis(labelFontSize=13, titleX=-51)),
-        color=alt.Color('type',
-                        scale=alt.Scale(domain=['Shapley Value', 'Mean'],
-                                        range=["#618FE0", '#d76d58']),
-                        legend=alt.Legend(title=None, fillColor="white",
-                                          symbolStrokeWidth=0, symbolSize=50,
-                                          orient="bottom-right")),
-        opacity=alt.condition(alt.datum.type == 'Mean', alt.value(1.0),
-                              alt.value(0.1)),
-        size=alt.condition(alt.datum.type == 'Mean', alt.value(70),
-                           alt.value(30)),
-    ).properties(
-        width=288,
-        height=280
-    )
-    return global_feats_plot
+        global_feats_plot = alt.Chart(feat_data).mark_point(stroke='white',
+                                                             strokeWidth=.6).encode(
+            x=alt.X('Shapley Value', axis=alt.Axis(title='Shapley Value', grid=True),
+                    scale=alt.Scale(domain=[-0.2, 0.6])),
+            y=alt.Y('Feature:O',
+                    sort=sort_features,
+                    axis=alt.Axis(labelFontSize=13, titleX=-51)),
+            color=alt.Color('type',
+                            scale=alt.Scale(domain=['Shapley Value', 'Mean'],
+                                            range=["#618FE0", '#d76d58']),
+                            legend=alt.Legend(title=None, fillColor="white",
+                                              symbolStrokeWidth=0, symbolSize=50,
+                                              orient="bottom-right")),
+            opacity=alt.condition(alt.datum.type == 'Mean', alt.value(1.0),
+                                  alt.value(0.1)),
+            size=alt.condition(alt.datum.type == 'Mean', alt.value(70),
+                               alt.value(30)),
+        ).properties(
+            width=288,
+            height=280
+        )
+        return global_feats_plot
+
+    feat_data_nsamples = list(np.unique(feat_data["NSamples"].values))
+    feat_data_rs = list(np.unique(feat_data["Random Seed"].values))
+    feat_data_tol = list(np.unique(feat_data["Tolerance"].values))
+
+    multi_plot = True if len(feat_data_nsamples) > 1 or len(feat_data_rs) > 1 or len(feat_data_tol) > 1 else False
+    final_plot = alt.vconcat()
+
+    for tolerance in feat_data_tol:
+        for rs in feat_data_rs:
+            for nsamples in feat_data_nsamples:
+                filtered_data = filter_dataset(feat_data, tolerance, rs, nsamples)
+                param_plot = plot(filtered_data, top_x_feats, threshold, plot_features)
+
+                if multi_plot:
+                    param_plot.title = f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
+                final_plot &= param_plot
+
+    return final_plot

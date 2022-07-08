@@ -13,4 +13,4 @@
 #  limitations under the License.
 
 from .timeshap_legacy import *
-from .utils import calc_avg_event, get_avg_score_with_avg_event
+from .utils import *

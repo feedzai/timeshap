@@ -16,6 +16,8 @@ import pandas as pd
 import copy
 import re
 import altair as alt
+import numpy as np
+from timeshap.plot.utils import filter_dataset
 
 
 def plot_event_heatmap(event_data: pd.DataFrame,
@@ -87,38 +89,58 @@ def plot_global_event(event_data: pd.DataFrame
         Event global explanations
 
     """
-    event_data = copy.deepcopy(event_data)
-    event_data = event_data[event_data['t (event index)'] < 1]
-    event_data = event_data[['Shapley Value', 't (event index)']]
+    def plot(event_data: pd.DataFrame):
+        event_data = copy.deepcopy(event_data)
+        event_data = event_data[event_data['t (event index)'] < 1]
+        event_data = event_data[['Shapley Value', 't (event index)']]
 
-    event_data['type'] = 'Shapley Value'
+        event_data['type'] = 'Shapley Value'
 
-    avg_df = event_data.groupby('t (event index)').mean()['Shapley Value']
+        avg_df = event_data.groupby('t (event index)').mean()['Shapley Value']
 
-    for index, value in avg_df.items():
-        event_data = event_data.append({'t (event index)': index, 'Shapley Value': value, 'type': 'Mean'}, ignore_index=True)
+        for index, value in avg_df.items():
+            event_data = event_data.append({'t (event index)': index, 'Shapley Value': value, 'type': 'Mean'}, ignore_index=True)
 
-    event_data = event_data[event_data['t (event index)'] >= -20]
-    event_data = event_data[event_data['Shapley Value'] >= -0.3]
+        event_data = event_data[event_data['t (event index)'] >= -20]
+        event_data = event_data[event_data['Shapley Value'] >= -0.3]
 
-    global_event = alt.Chart(event_data).mark_point(stroke='white',
-                                                  strokeWidth=.6).encode(
-        y=alt.Y('Shapley Value', axis=alt.Axis(grid=True, titleX=-23),
-                title="Shapley Value", scale=alt.Scale(domain=[-0.3, 0.9], )),
-        x=alt.X('t (event index):O', axis=alt.Axis(labelAngle=0)),
-        color=alt.Color('type',
-                        scale=alt.Scale(domain=['Shapley Value', 'Mean'],
-                                        range=["#48caaa", '#d76d58']),
-                        legend=alt.Legend(title=None, fillColor="white",
-                                          symbolStrokeWidth=0, symbolSize=50,
-                                          orient="top-left")),
-        opacity=alt.condition(alt.datum.type == 'Mean', alt.value(1.0),
-                              alt.value(0.2)),
-        size=alt.condition(alt.datum.type == 'Mean', alt.value(70),
-                           alt.value(30)),
-    ).properties(
-        width=360,
-        height=150
-    )
+        global_event = alt.Chart(event_data).mark_point(stroke='white',
+                                                      strokeWidth=.6).encode(
+            y=alt.Y('Shapley Value', axis=alt.Axis(grid=True, titleX=-23),
+                    title="Shapley Value", scale=alt.Scale(domain=[-0.3, 0.9], )),
+            x=alt.X('t (event index):O', axis=alt.Axis(labelAngle=0)),
+            color=alt.Color('type',
+                            scale=alt.Scale(domain=['Shapley Value', 'Mean'],
+                                            range=["#48caaa", '#d76d58']),
+                            legend=alt.Legend(title=None, fillColor="white",
+                                              symbolStrokeWidth=0, symbolSize=50,
+                                              orient="top-left")),
+            opacity=alt.condition(alt.datum.type == 'Mean', alt.value(1.0),
+                                  alt.value(0.2)),
+            size=alt.condition(alt.datum.type == 'Mean', alt.value(70),
+                               alt.value(30)),
+        ).properties(
+            width=360,
+            height=150
+        )
 
-    return global_event
+        return global_event
+
+    event_data_nsamples = list(np.unique(event_data["NSamples"].values))
+    event_data_rs = list(np.unique(event_data["Random Seed"].values))
+    event_data_tol = list(np.unique(event_data["Tolerance"].values))
+
+    multi_plot = True if len(event_data_nsamples) > 1 or len(event_data_rs) > 1 or len(event_data_tol) > 1 else False
+    final_plot = alt.vconcat()
+
+    for tolerance in event_data_tol:
+        for rs in event_data_rs:
+            for nsamples in event_data_nsamples:
+                filtered_data = filter_dataset(event_data, tolerance, rs, nsamples)
+                param_plot = plot(filtered_data)
+
+                if multi_plot:
+                    param_plot.title = f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
+                final_plot &= param_plot
+
+    return final_plot

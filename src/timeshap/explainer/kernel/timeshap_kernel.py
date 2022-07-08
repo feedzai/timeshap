@@ -44,7 +44,7 @@ import scipy as sp
 import logging
 import copy
 import itertools
-from typing import Tuple
+from typing import Tuple, Union
 
 from timeshap.utils.timeshap_legacy import time_shap_match_instance_to_data, \
     time_shap_match_model_to_data, time_shap_convert_to_data, TimeShapDenseData
@@ -138,9 +138,35 @@ class TimeShapKernel(Kernel):
         self.keep_index = kwargs.get("keep_index", False)
         self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
 
-    def set_variables_up(self, X):
-        sequence = np.tile(self.background, (X.shape[1], 1))
-        sequence = np.expand_dims(sequence.copy(), axis=0)
+    def set_variables_up(self, X: Union[pd.DataFrame, np.ndarray]):
+        if len(self.background.shape) == 2:
+            # 2D background needs to be expanded
+            if self.background.shape[0] > 1 and not self.background.shape[0] == X.shape[1]:
+                raise ValueError(
+                    "When using background events, you can only pass one average event."
+                    "When using background sequence, your background must be the same sequence length of the explained sequence")
+            elif self.background.shape[0] > 1 and self.background.shape[0] == X.shape[1]:
+                # average sequence
+                sequence = copy.deepcopy(self.background)
+            elif self.background.shape[0] == 1:
+                # average event
+                sequence = np.tile(self.background, (X.shape[1], 1))
+            else:
+                raise ValueError("Unknown combination of background and sequence sizes. Please open a ticket on github")
+            sequence = np.expand_dims(sequence.copy(), axis=0)
+        elif len(self.background.shape) == 3:
+            if self.background.shape[1] > 1 and not self.background.shape[1] == X.shape[1]:
+                raise ValueError(
+                    "When using background events, you can only pass one average event."
+                    "When using background sequence, your background must be the same sequence length of the explained sequence")
+            elif self.background.shape[1] > 1 and self.background.shape[1] == X.shape[1]:
+                # average sequence
+                sequence = copy.deepcopy(self.background)
+            elif self.background.shape[1] == 1:
+                # average event
+                sequence = np.tile(self.background, (1, X.shape[1], 1))
+            else:
+                raise ValueError("Unknown combination of background and sequence sizes. Please open a ticket on github")
 
         if self.mode == 'cell':
             self.data, self.special_cells = time_shap_convert_to_data(sequence, self.mode, self.pruning_idx, self.varying)
@@ -164,8 +190,12 @@ class TimeShapKernel(Kernel):
                 _, self.instance_hs = self.model.f(X[:, :self.pruning_idx, :])
                 assert isinstance(self.background_hs, (np.ndarray, tuple)), "Hidden states are required to be numpy arrays or tuple "
                 if isinstance(self.background_hs, tuple):
-                    for x in self.background_hs:
-                        assert isinstance(x, np.ndarray)
+                    if isinstance(self.background_hs[0], tuple):
+                        # working with LSTM
+                        assert np.array([len(x) == 2 for x in self.background_hs]).all()
+                        assert np.array([[isinstance(y, np.ndarray) for y in x] for x in self.background_hs]).all()
+                    else:
+                        assert np.array([isinstance(x, np.ndarray) for x in self.background_hs]).all()
         # enforce our current input type limitations
         assert isinstance(self.data, TimeShapDenseData), \
             "Shap explainer only supports the DenseData input currently."
@@ -559,7 +589,10 @@ class TimeShapKernel(Kernel):
             if self.returns_hs and self.mode != 'pruning':
                 self.synth_data = np.tile(self.data.data[:, self.pruning_idx:, :], (self.nsamples, 1, 1))
                 if isinstance(self.background_hs, tuple):
-                    self.synth_hidden_states = tuple(np.tile(x, (1, self.nsamples, 1)) for x in self.background_hs)
+                    if isinstance(self.background_hs[0], tuple):
+                        self.synth_hidden_states = tuple(tuple(np.tile(y, (1, self.nsamples, 1)) for y in x) for x in self.background_hs)
+                    else:
+                        self.synth_hidden_states = tuple(np.tile(x, (1, self.nsamples, 1)) for x in self.background_hs)
                 else:
                     self.synth_hidden_states = np.tile(self.background_hs, (1, self.nsamples, 1))
 
@@ -609,9 +642,15 @@ class TimeShapKernel(Kernel):
             # in case self.pruning_idx == sequence length, we dont prune anything.
             if not self.pruning_idx == self.S:
                 if self.returns_hs:
+                    # in case of using hidden state optimization, the background is the instance one
                     if isinstance(self.synth_hidden_states, tuple):
-                        for i, i_layer_state in enumerate(self.synth_hidden_states):
-                            i_layer_state[:, offset:offset + self.N,:] = self.instance_hs[i]
+                        if isinstance(self.synth_hidden_states[0], tuple):
+                            for i, i_layer_state in enumerate(self.synth_hidden_states):
+                                i_layer_state[0][:, offset:offset + self.N, :] = self.instance_hs[i][0]
+                                i_layer_state[1][:, offset:offset + self.N, :] = self.instance_hs[i][1]
+                        else:
+                            for i, i_layer_state in enumerate(self.synth_hidden_states):
+                                i_layer_state[:, offset:offset + self.N, :] = self.instance_hs[i]
                     else:
                         self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
                 else:
@@ -683,8 +722,13 @@ class TimeShapKernel(Kernel):
                 if self.returns_hs:
                     # in case of using hidden state optimization, the background is the instance one
                     if isinstance(self.synth_hidden_states, tuple):
-                        for i, i_layer_state in enumerate(self.synth_hidden_states):
-                            i_layer_state[:, offset:offset + self.N,:] = self.instance_hs[i]
+                        if isinstance(self.synth_hidden_states[0], tuple):
+                            for i, i_layer_state in enumerate(self.synth_hidden_states):
+                                i_layer_state[0][:, offset:offset + self.N,:] = self.instance_hs[i][0]
+                                i_layer_state[1][:, offset:offset + self.N,:] = self.instance_hs[i][1]
+                        else:
+                            for i, i_layer_state in enumerate(self.synth_hidden_states):
+                                i_layer_state[:, offset:offset + self.N,:] = self.instance_hs[i]
                     else:
                         self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
                 else:
@@ -711,11 +755,17 @@ class TimeShapKernel(Kernel):
             # in case self.pruning_idx == sequence length, we dont prune anything.
             if not self.pruning_idx == self.S:
                 if self.returns_hs:
+                    # in case of using hidden state optimization, the background is the instance one
                     if isinstance(self.synth_hidden_states, tuple):
-                        for i, i_layer_state in enumerate(self.synth_hidden_states):
-                            i_layer_state[:, offset:offset + self.N,:] = self.instance_hs[i]
+                        if isinstance(self.synth_hidden_states[0], tuple):
+                            for i, i_layer_state in enumerate(self.synth_hidden_states):
+                                i_layer_state[0][:, offset:offset + self.N, :] = self.instance_hs[i][0]
+                                i_layer_state[1][:, offset:offset + self.N, :] = self.instance_hs[i][1]
+                        else:
+                            for i, i_layer_state in enumerate(self.synth_hidden_states):
+                                i_layer_state[:, offset:offset + self.N, :] = self.instance_hs[i]
                     else:
-                        self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
+                        self.synth_hidden_states[:, offset:offset + self.N,:] = self.instance_hs
                 else:
                     evaluation_data = x[0:1, :self.pruning_idx, :]
                     self.synth_data[offset:offset + self.N, :self.pruning_idx,:] = evaluation_data
@@ -738,7 +788,10 @@ class TimeShapKernel(Kernel):
 
         if not self.mode == 'pruning' and self.returns_hs:
             if isinstance(self.synth_hidden_states, tuple):
-                hidden_sates = tuple(x[:, self.nsamplesRun * self.N: self.nsamplesAdded * self.N,:] for x in self.synth_hidden_states)
+                if isinstance(self.synth_hidden_states[0], tuple):
+                    hidden_sates = tuple(tuple(y[:, self.nsamplesRun * self.N: self.nsamplesAdded * self.N,:] for y in x) for x in self.synth_hidden_states)
+                else:
+                    hidden_sates = tuple(x[:, self.nsamplesRun * self.N: self.nsamplesAdded * self.N,:] for x in self.synth_hidden_states)
             else:
                 hidden_sates = self.synth_hidden_states[:, self.nsamplesRun * self.N: self.nsamplesAdded * self.N,:]
 

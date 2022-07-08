@@ -13,7 +13,6 @@ def stream_requirements(fd):
         if cleaned and not cleaned.startswith('-r'):
             yield cleaned
 
-
 # ---------------------------------------------------------------------------- #
 #                                   Requirements                               #
 # ---------------------------------------------------------------------------- #
@@ -21,15 +20,14 @@ def stream_requirements(fd):
 ROOT_PATH = Path(__file__).parent
 README_PATH = ROOT_PATH / 'README.md'
 REQUIREMENTS_PATH = ROOT_PATH / 'requirements' / 'main.txt'
-# REQUIREMENTS_TEST_PATH = ROOT_PATH / 'requirements' / 'test.txt'
+REQUIREMENTS_TEST_PATH = ROOT_PATH / 'requirements' / 'test.txt'
 
 with REQUIREMENTS_PATH.open() as requirements_file:
     requirements = list(stream_requirements(requirements_file))
 
-# with REQUIREMENTS_TEST_PATH.open() as test_requirements_file:
-#     requirements_test = requirements[:]
-#     requirements_test.extend(stream_requirements(test_requirements_file))
-
+with REQUIREMENTS_TEST_PATH.open() as test_requirements_file:
+    requirements_test = requirements[:]
+    requirements_test.extend(stream_requirements(test_requirements_file))
 
 # ---------------------------------------------------------------------------- #
 #                                   Version                                    #
@@ -39,7 +37,6 @@ VERSION_PATH = SRC_PATH / 'version.py'
 
 with VERSION_PATH.open('rb') as version_file:
     exec(version_file.read())
-
 
 # ---------------------------------------------------------------------------- #
 #                                   SETUP                                      #
@@ -69,6 +66,6 @@ setup(
 
     zip_safe=False,
 
-    #test_suite='tests',
-    #tests_require=REQUIREMENTS_TEST,
+    test_suite='tests',
+    tests_require=requirements_test,
 )
