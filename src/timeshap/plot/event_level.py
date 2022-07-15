@@ -29,6 +29,10 @@ def plot_event_heatmap(event_data: pd.DataFrame,
     event_data: pd.DataFrame
         Event global explanations
 
+    Returns
+    -------
+    altair.plot
+
     """
     event_data = copy.deepcopy(event_data)
     # extract digit to order df by - this is redundant but gives security to the method
@@ -88,6 +92,9 @@ def plot_global_event(event_data: pd.DataFrame
     event_data: pd.DataFrame
         Event global explanations
 
+    Returns
+    -------
+    altair.plot
     """
     def plot(event_data: pd.DataFrame):
         event_data = copy.deepcopy(event_data)

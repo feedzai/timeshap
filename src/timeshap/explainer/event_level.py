@@ -26,8 +26,8 @@ from timeshap.utils import get_tolerances_to_test
 
 
 def event_level(f: Callable,
-                data: np.ndarray,
-                baseline: np.ndarray,
+                data: np.array,
+                baseline: Union[np.ndarray, pd.DataFrame],
                 pruned_idx: int,
                 random_seed: int,
                 nsamples: int,
@@ -42,15 +42,16 @@ def event_level(f: Callable,
         This method receives a 3-D np.ndarray (#samples, #seq_len, #features).
         This method returns a 2-D np.ndarray (#samples, 1).
 
-    data: pd.DataFrame
+    data: np.array
         Sequence to explain.
 
     baseline: Union[np.ndarray, pd.DataFrame],
         Dataset baseline. Median/Mean of numerical features and mode of categorical.
         In case of np.array feature are assumed to be in order with `model_features`.
+        The baseline can be an average event or an average sequence
 
     pruned_idx: int
-        Index to prune the sequence. All events up to this point are grouped
+        Index to prune the sequence. All events up to this index are grouped
 
     random_seed: int
         Used random seed for the sampling process.
@@ -82,7 +83,7 @@ def event_level(f: Callable,
 
 
 def local_event(f: Callable[[np.ndarray], np.ndarray],
-                data: Union[pd.DataFrame, np.array],
+                data: np.array,
                 event_dict: dict,
                 entity_uuid: Union[str, int, float],
                 entity_col: str,
@@ -98,7 +99,7 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
         This method receives a 3-D np.ndarray (#samples, #seq_len, #features).
         This method returns a 2-D np.ndarray (#samples, 1).
 
-    data: pd.DataFrame
+    data: np.array
         Sequence to explain.
 
     event_dict: dict
@@ -114,9 +115,10 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
     baseline: Union[np.ndarray, pd.DataFrame],
         Dataset baseline. Median/Mean of numerical features and mode of categorical.
         In case of np.array feature are assumed to be in order with `model_features`.
+        The baseline can be an average event or an average sequence
 
     pruned_idx: int
-        Index to prune the sequence. All events up to this point are grouped
+        Index to prune the sequence. All events up to this index are grouped
 
     Returns
     -------
@@ -148,6 +150,12 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
 
 
 def verify_event_dict(event_dict: dict):
+    """Verifies the format of the event dict for event level explanations
+
+    Parameters
+    ----------
+    event_dict: dict
+    """
     if event_dict.get('path'):
         assert isinstance(event_dict.get('path'), str), "Provided path must be a string"
 
@@ -203,16 +211,9 @@ def event_explain_all(f: Callable,
         This method receives a 3-D np.ndarray (#samples, #seq_len, #features).
         This method returns a 2-D np.ndarray (#samples, 1).
 
-    data: pd.DataFrame
+    data: Union[List[np.ndarray], pd.DataFrame, np.array]
         Sequences to be explained.
         Must contain columns with names disclosed on `model_features`.
-
-    entity_col: str
-        Entity column to identify sequences
-
-    baseline: Union[pd.DataFrame, np.array]
-        Dataset baseline. Median/Mean of numerical features and mode of categorical.
-        In case of np.array feature are assumed to be in order with `model_features`.
 
     event_dict: dict
         Information required for the event level explanation calculation
@@ -221,12 +222,26 @@ def event_explain_all(f: Callable,
         Pruning indexes for all sequences being explained.
         Produced by `prune_all`
 
+    baseline: Union[np.ndarray, pd.DataFrame],
+        Dataset baseline. Median/Mean of numerical features and mode of categorical.
+        In case of np.array feature are assumed to be in order with `model_features`.
+        The baseline can be an average event or an average sequence
+
     model_features: List[str]
         Features to be used by the model. Requires same order as training dataset
+
+    schema: List[str]
+        Schema of provided data
+
+    entity_col: str
+        Entity column to identify sequences
 
     time_col: str
         Data column that represents the time feature in order to sort sequences
         temporally
+
+    append_to_files: bool
+        Append explanations to files if file already exists
 
     verbose: bool
         If process is verbose
@@ -242,7 +257,7 @@ def event_explain_all(f: Callable,
     make_predictions = True
     event_data = None
 
-    tolerances_to_calc = get_tolerances_to_test(pruning_data, event_dict, entity_col)
+    tolerances_to_calc = get_tolerances_to_test(pruning_data, event_dict)
 
     if file_path is not None and os.path.exists(file_path) and not append_to_files:
         event_data = pd.read_csv(file_path)

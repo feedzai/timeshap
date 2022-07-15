@@ -38,6 +38,11 @@ def plot_temp_coalition_pruning(df: pd.DataFrame,
 
     solve_negatives: bool
         Whether to remove negative importances of the background instances
+
+    Returns
+    -------
+    altair.plot
+        The local report
     """
 
     def solve_negatives_method(df):

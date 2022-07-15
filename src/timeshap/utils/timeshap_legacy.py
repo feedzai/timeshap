@@ -80,16 +80,14 @@ def time_shap_match_model_to_data(model, data):
             out_val, _ = out_val
             returns_hs = True
     except:
-        print(
-            "Provided model function fails when applied to the provided data set.")
+        print("Provided model function fails when applied to the provided data set.")
         raise
 
     if model.out_names is None:
         if len(out_val.shape) == 1:
             model.out_names = ["output value"]
         else:
-            model.out_names = ["output value " + str(i) for i in
-                               range(out_val.shape[0])]
+            model.out_names = ["output value " + str(i) for i in range(out_val.shape[0])]
 
     return out_val, returns_hs
 
@@ -102,10 +100,10 @@ def time_shap_convert_to_data(val, mode, pruning_idx, varying=None):
                 event_names += ["Pruned Events"]
             return TimeShapDenseData(val, mode, event_names)
         elif mode == 'feature':
-            event_names = ["Feat: {}".format(i) for i in np.arange(val.shape[2])]
+            feature_names = ["Feat: {}".format(i) for i in np.arange(val.shape[2])]
             if pruning_idx > 0:
-                event_names += ["Pruned Events"]
-            return TimeShapDenseData(val, mode, event_names)
+                feature_names += ["Pruned Events"]
+            return TimeShapDenseData(val, mode, feature_names)
         elif mode == 'cell':
             group_names = []
             for event_idx in varying[0]:
@@ -123,14 +121,14 @@ def time_shap_convert_to_data(val, mode, pruning_idx, varying=None):
                 pruned_events = False
 
             # check if there are other cells
-            if not(len(varying[0]) == val.shape[1]-pruning_idx or len(varying[1]) == val.shape[2]):
+            if not(len(varying[0]) == val.shape[1] - pruning_idx or len(varying[1]) == val.shape[2]):
                 special_names += ["Other Cells"]
                 used_index += 1
                 all_other = used_index
             else:
                 all_other = False
 
-            if len(varying[0]) < val.shape[1]-pruning_idx:
+            if len(varying[0]) < val.shape[1] - pruning_idx:
                 special_names += reversed(["Other events on feature {}".format(x) for x in varying[1]])
                 used_index += 1
                 other_event_rel_feat = used_index
@@ -155,4 +153,4 @@ def time_shap_convert_to_data(val, mode, pruning_idx, varying=None):
     elif isinstance(val, Data):
         return val
     else:
-        assert False, "Unknown type passed as data object: "+str(type(val))
+        assert False, "Unknown type passed as data object: " + str(type(val))

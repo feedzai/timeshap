@@ -36,6 +36,10 @@ def plot_cell_level(cell_data: pd.DataFrame,
 
     plot_features: dict
         Dict containing mapping between model features and display features
+
+    Returns
+    -------
+    altair.plot
     """
     c_range = ["#5f8fd6",
                "#99c3fb",

@@ -17,4 +17,5 @@ from .pruning import *
 from .event_level import *
 from .feature_level import *
 from .cell_level import *
+from .local_report import *
 from .global_report import *

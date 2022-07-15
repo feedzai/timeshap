@@ -22,6 +22,36 @@ from pathlib import Path
 from timeshap.utils import convert_to_indexes, convert_data_to_3d
 
 
+def calc_prun_indexes(df: pd.DataFrame, tol: Union[float, int, list]):
+    """Calculates the pruning indexes given pruning data and tolerances
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        Pruning data to be analysed produced by `prune_all`
+
+    tol: Union[float, list]
+        The tolerances to analyze the pruning
+
+    Returns
+    -------
+    pd.DataFrame
+    """
+    if "Tolerance" not in list(df.columns):
+        pruning_data = []
+        if not isinstance(tol, list):
+            tol = [tol]
+        for uuid in np.unique(df.iloc[:, -1].values):
+            uuid_data = df[df.iloc[:, -1] == uuid]
+            pruning_data.append([uuid, -1, -(uuid_data.shape[0] / 2) + 1])
+            for tolerance in tol:
+                pruning_idx = prune_given_data(uuid_data, tolerance)
+                pruning_data.append([uuid, tolerance, pruning_idx])
+
+        df = pd.DataFrame(pruning_data, columns=["Entity", 'Tolerance', 'Pruning idx'])
+    return df
+
+
 def pruning_statistics(df: pd.DataFrame,
                        tol: Union[float, list],
                        ):
@@ -42,15 +72,7 @@ def pruning_statistics(df: pd.DataFrame,
     if isinstance(tol, float):
         tol = [tol]
     if "Tolerance" not in list(df.columns):
-        pruning_data = []
-        for uuid in np.unique(df.iloc[:, -1].values):
-            uuid_data = df[df.iloc[:, -1] == uuid]
-            pruning_data.append([uuid, -1, -(uuid_data.shape[0]/2)+1])
-            for tolerance in tol:
-                pruning_idx = prune_given_data(uuid_data, tolerance)
-                pruning_data.append([uuid, tolerance, pruning_idx])
-
-        df = pd.DataFrame(pruning_data, columns=["Entity", 'Tolerance', 'Pruning idx'])
+        df = calc_prun_indexes(df, tol)
 
     resume = []
     orig = df[df['Tolerance'] == -1]
@@ -89,7 +111,7 @@ def prune_given_data(data: pd.DataFrame, tolerance: float) -> int:
     data = data[data['Coalition'] == 'Sum of contribution of events \u2264 t']
     if tolerance == 0:
         # to filter float unprecision out
-        tolerance = 0.000001
+        tolerance = 0.00000000001
     respecting_lens = data[data['Shapley Value'].abs() <= tolerance]
     if respecting_lens.shape[0] == 0:
         return -data['t (event index)'].min()
@@ -120,6 +142,7 @@ def temp_coalition_pruning(f: Callable,
     baseline: Union[np.ndarray, pd.DataFrame],
         Dataset baseline. Median/Mean of numerical features and mode of categorical.
         In case of np.array feature are assumed to be in order with `model_features`.
+        The baseline can be an average event or an average sequence
 
     tolerance: float
         Temporal coalition explainer tolerance.
@@ -156,6 +179,10 @@ def temp_coalition_pruning(f: Callable,
 
         if verbose:
             print("len {} | importance {}".format(-data.shape[1] + seq_len, shap_values[1]))
+
+        if tolerance and seq_len == data.shape[1] and abs(shap_values[1]) <= tolerance:
+            print("Unable to prune sequence.")
+
         if seq_len < data.shape[1] and tolerance and abs(shap_values[1]) <= tolerance:
             if pruning_idx == 0:
                 pruning_idx = -data.shape[1] + seq_len
@@ -202,6 +229,7 @@ def local_pruning(f: Callable[[np.ndarray], np.ndarray],
     baseline: Union[np.ndarray, pd.DataFrame],
         Dataset baseline. Median/Mean of numerical features and mode of categorical.
         In case of np.array feature are assumed to be in order with `model_features`.
+        The baseline can be an average event or an average sequence
 
     entity_uuid: Union[str, int, float]
         The indentifier of the sequence that is being pruned.
@@ -255,6 +283,12 @@ def local_pruning(f: Callable[[np.ndarray], np.ndarray],
 
 
 def verify_pruning_dict(pruning_dict: dict):
+    """Verifies the format of the pruning dict
+
+    Parameters
+    ----------
+    pruning_dict: dict
+    """
     if pruning_dict.get('path'):
         assert isinstance(pruning_dict.get('path'), str)
 
@@ -279,7 +313,7 @@ def prune_all(f: Callable,
               append_to_files: bool = False,
               verbose: bool = False,
               ) -> pd.DataFrame:
-    """Temporal coalition pruning method
+    """Applies pruning to a dataset
 
     Parameters
     ----------
@@ -291,22 +325,29 @@ def prune_all(f: Callable,
     data: Union[pd.DataFrame, np.array]
         Sequence to explain.
 
-    entity_col: str
-        Column that contains the sequence identifiers
+    pruning_dict: dict
+        Information required for pruning algorithm
 
     baseline: Union[np.ndarray, pd.DataFrame],
         Dataset baseline. Median/Mean of numerical features and mode of categorical.
         In case of np.array feature are assumed to be in order with `model_features`.
-
-    pruning_dict: dict
-        Information required for pruning algorithm
+        The baseline can be an average event or an average sequence
 
     model_features: List[str]
         In-order list of features to select and input to the model
 
+    schema: List[str]
+        Schema of provided data
+
+    entity_col: str
+        Column that contains the sequence identifiers
+
     time_col: str
         Data column that represents the time feature in order to sort sequences
         temporally
+
+    append_to_files: bool
+        Append explanations to files if file already exists
 
     verbose: bool
         If process is verbose
@@ -372,12 +413,5 @@ def prune_all(f: Callable,
 
         prun_data = pd.DataFrame(np.concatenate(ret_prun_data), columns=names)
 
-    pruning_data = []
-    for uuid in np.unique(prun_data.iloc[:, -1].values):
-        uuid_data = prun_data[prun_data.iloc[:, -1] == uuid]
-        pruning_data.append([uuid, -1, -(uuid_data.shape[0]/2)+1])
-        for tol in tolerances:
-            pruning_idx = prune_given_data(uuid_data, tol)
-            pruning_data.append([uuid, tol, pruning_idx])
-
-    return pd.DataFrame(pruning_data, columns=["Entity", 'Tolerance', 'Pruning idx'])
+    df = calc_prun_indexes(prun_data, tolerances)
+    return df

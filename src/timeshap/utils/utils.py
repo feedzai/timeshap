@@ -19,7 +19,66 @@ import copy
 from scipy import stats
 
 
-def get_tolerances_to_test(pruning_data, explanation_dict, entity_col):
+def make_list(element) -> list:
+    """Wraps element in list, if element not a list already
+
+    Parameters
+    ----------
+    element
+
+    Returns
+    -------
+    list
+    """
+    if isinstance(element, (int, float)):
+        element = [element]
+    elif isinstance(element, list):
+        pass
+    else:
+        raise ValueError("Unrecognized parameter format")
+    return element
+
+
+def calculate_list_intersection(a: list, b: list) -> list:
+    """Calculates list intersections
+
+    Parameters
+    ----------
+    a: list
+
+    b: list
+
+    Returns
+    -------
+    list
+    """
+    if len(b) == 0:
+        return a
+    elif len(a) == 0:
+        return b
+    intersection = list(set(a).intersection(set(b)))
+    assert len(intersection) > 0
+    return intersection
+
+
+def get_tolerances_to_test(pruning_data: pd.DataFrame,
+                           explanation_dict: dict,
+                           ):
+    """Converts datasets into list of numpy arrays for smooth global explanation calculation
+
+    Parameters
+    ----------
+    pruning_data: pd.DataFrame
+        Data to explain
+
+    explanation_dict: dict
+        Data schema
+
+    Returns
+    -------
+    List[np.ndarray]
+        List of sequences
+    """
     if pruning_data is None:
         if explanation_dict.get('tol', False):
             print("No pruning data provided and no pruning tolerances provided. No pruning will take place")
@@ -28,7 +87,6 @@ def get_tolerances_to_test(pruning_data, explanation_dict, entity_col):
             tolerances_to_calc = explanation_dict.get('tol')
             print(f"No pruning data provided. TimeSHAP will calculate pruning on-the fly using provided tolerances: {list(tolerances_to_calc)} ")
     else:
-        assert entity_col is not None, "Entity column must be provided when using pre-calculted pruning data"
         tolerances_to_calc = np.unique(pruning_data['Tolerance'].values)
         tolerances_to_calc = tolerances_to_calc[~(tolerances_to_calc == -1)]
         input_tols = explanation_dict.get('tol')
@@ -38,10 +96,29 @@ def get_tolerances_to_test(pruning_data, explanation_dict, entity_col):
 
     return tolerances_to_calc
 
+
 def convert_data_to_3d(data: Union[pd.DataFrame, np.ndarray],
                        entity_col_index: int = None,
                        time_col_index: int = None,
                        ) -> List[np.ndarray]:
+    """Converts datasets into list of numpy arrays for smooth global explanation calculation
+
+    Parameters
+    ----------
+    data: Union[pd.DataFrame, np.ndarray]
+        Data to explain
+
+    entity_col_index: int
+        Index of the entity column
+
+    time_col_index: int
+        Index of the time column
+
+    Returns
+    -------
+    List[np.ndarray]
+        List of sequences
+    """
     if isinstance(data, list) and isinstance(data[0], np.ndarray) and len(data[0].shape) == 3:
         return data
     dataset = []
@@ -82,6 +159,33 @@ def convert_to_indexes(model_features: List[Union[int, str]] = None,
                        entity_col: Union[int, str] = None,
                        time_col: Union[int, str] = None,
                        ):
+    """Converts features into indexes given a schema
+
+    Parameters
+    ----------
+    model_features: List[Union[int, str]]
+        Model features
+
+    schema: List[str]
+        Data schema
+
+    entity_col: Union[int, str]
+        Entity column
+
+    time_col: Union[int, str]
+        Time column
+
+    Returns
+    -------
+    List[int]
+        Model features index
+
+    int
+        entity column index
+
+    int
+        time column index
+    """
     model_features_index, entity_col_index, time_col_index = None, None, None
     if model_features is not None:
         if isinstance(model_features[0], str):
@@ -183,6 +287,21 @@ def calc_avg_event(data: pd.DataFrame,
 
 
 def get_score_of_avg_sequence(model, data: np.ndarray):
+    """Scores the average sequence
+
+    Parameters
+    ----------
+    model: Union[TimeSHAPWrapper, torch.nn.Module, tf.Module]
+        An RNN model.
+
+    data:
+        Average sequence
+
+    Returns
+    -------
+    float
+        Score of average sequence
+    """
     if len(data.shape) == 2:
         data = np.expand_dims(data, axis=0)
 

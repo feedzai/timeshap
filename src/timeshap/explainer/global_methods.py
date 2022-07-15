@@ -15,7 +15,7 @@
 from typing import Callable, Union, List
 import numpy as np
 import pandas as pd
-from timeshap.explainer import prune_all, pruning_statistics, event_explain_all, feat_explain_all
+from timeshap.explainer import prune_all, event_explain_all, feat_explain_all
 from timeshap.explainer.pruning import verify_pruning_dict
 from timeshap.explainer.event_level import verify_event_dict
 from timeshap.explainer.feature_level import verify_feature_dict
@@ -38,6 +38,53 @@ def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
                           append_to_files: bool = False,
                           verbose: bool = False,
                           ):
+    """ Validates the inputs for global reports
+
+    Parameters
+    ----------
+    f: Callable[[np.ndarray], np.ndarray]
+        Point of entry for model being explained.
+        This method receives a 3-D np.ndarray (#samples, #seq_len, #features).
+        This method returns a 2-D np.ndarray (#samples, 1).
+
+    data: Union[List[np.ndarray], pd.DataFrame, np.array]
+        Sequences to be explained.
+        Must contain columns with names disclosed on `model_features`.
+
+    pruning_dict: dict
+        Information required for the pruning algorithm
+
+    event_dict: dict
+        Information required for the event level explanation calculation
+
+    feature_dict: dict
+        Information required for the feature level explanation calculation
+
+    baseline: Union[np.ndarray, pd.DataFrame],
+        Dataset baseline. Median/Mean of numerical features and mode of categorical.
+        In case of np.array feature are assumed to be in order with `model_features`.
+        The baseline can be an average event or an average sequence
+
+    model_features: List[str]
+        Features to be used by the model. Requires same order as training dataset
+
+    schema: List[str]
+        Schema of provided data
+
+    entity_col: str
+        Entity column to identify sequences
+
+    time_col: str
+        Data column that represents the time feature in order to sort sequences
+        temporally
+
+    append_to_files: bool
+        Append explanations to files if file already exists
+
+    verbose: bool
+        If process is verbose
+
+    """
     assert isinstance(f, Callable), "Provided model must be callable"
     assert isinstance(data, (pd.DataFrame, np.ndarray)), "Provided data must be an numpy array or pandas DataFrame"
     assert baseline is None or isinstance(baseline, (pd.DataFrame, np.ndarray)), "Provided baseline must be an numpy array or pandas DataFrame"
@@ -114,7 +161,63 @@ def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
                              max_instances: int = 10000,
                              verbose: bool = False,
                              ):
+    """ Calculates global report explanations
 
+    Parameters
+    ----------
+    f: Callable[[np.ndarray], np.ndarray]
+        Point of entry for model being explained.
+        This method receives a 3-D np.ndarray (#samples, #seq_len, #features).
+        This method returns a 2-D np.ndarray (#samples, 1).
+
+    data: Union[List[np.ndarray], pd.DataFrame, np.array]
+        Sequences to be explained.
+        Must contain columns with names disclosed on `model_features`.
+
+    pruning_dict: dict
+        Information required for the pruning algorithm
+
+    event_dict: dict
+        Information required for the event level explanation calculation
+
+    feature_dict: dict
+        Information required for the feature level explanation calculation
+
+    baseline: Union[np.ndarray, pd.DataFrame],
+        Dataset baseline. Median/Mean of numerical features and mode of categorical.
+        In case of np.array feature are assumed to be in order with `model_features`.
+        The baseline can be an average event or an average sequence
+
+    model_features: List[str]
+        Features to be used by the model. Requires same order as training dataset
+
+    schema: List[str]
+        Schema of provided data
+
+    entity_col: str
+        Entity column to identify sequences
+
+    time_col: str
+        Data column that represents the time feature in order to sort sequences
+        temporally
+
+    append_to_files: bool
+        Append explanations to files if file already exists
+
+    verbose: bool
+        If process is verbose
+
+    Returns
+    -------
+    pd.DataFrame
+        Global pruning algorithm information
+
+    pd.DataFrame
+        Global event explanations
+
+    pd.DataFrame
+        Global feature explanations
+    """
     if schema is None and isinstance(data, pd.DataFrame):
         schema = list(data.columns)
 
@@ -153,36 +256,71 @@ def global_report(f: Callable[[np.ndarray], np.ndarray],
                   max_instances: int = 10000,
                   verbose: bool = False,
                   ):
-    """Plots a global report of a model applied to a dataset
+    """ Calculates the global report and plots it.
 
     Parameters
     ----------
+    f: Callable[[np.ndarray], np.ndarray]
+        Point of entry for model being explained.
+        This method receives a 3-D np.ndarray (#samples, #seq_len, #features).
+        This method returns a 2-D np.ndarray (#samples, 1).
+
+    data: Union[List[np.ndarray], pd.DataFrame, np.array]
+        Sequences to be explained.
+        Must contain columns with names disclosed on `model_features`.
+
+    pruning_dict: dict
+        Information required for the pruning algorithm
+
+    event_dict: dict
+        Information required for the event level explanation calculation
+
+    feature_dict: dict
+        Information required for the feature level explanation calculation
+
+    baseline: Union[np.ndarray, pd.DataFrame],
+        Dataset baseline. Median/Mean of numerical features and mode of categorical.
+        In case of np.array feature are assumed to be in order with `model_features`.
+        The baseline can be an average event or an average sequence
+
+    model_features: List[str]
+        Features to be used by the model. Requires same order as training dataset
+
+    schema: List[str]
+        Schema of provided data
+
+    entity_col: str
+        Entity column to identify sequences
+
+    time_col: str
+        Data column that represents the time feature in order to sort sequences
+        temporally
+
+    append_to_files: bool
+        Append explanations to files if file already exists
+
+    max_instances: int
+        Max instances to use for global plots and explanations.
+        Used to limit explanation dump file sizes and allow for feasable
+        plot time
+
+    verbose: bool
+        If process is verbose
 
     Returns
     -------
     pd.DataFrame
     """
-    prun_indexes, event_data, feat_data = calc_global_explanations(f,
-                  data,
-                  pruning_dict,
-                  event_dict,
-                  feature_dict,
-                  baseline,
-                  model_features,
-                  schema,
-                  entity_col,
-                  time_col,
-                  append_to_files,
-                  max_instances,
-                  verbose,
-                  )
+    prun_indexes, event_data, feat_data = \
+        calc_global_explanations(f, data, pruning_dict, event_dict,
+                                 feature_dict, baseline, model_features,
+                                 schema, entity_col, time_col, append_to_files,
+                                 max_instances, verbose
+                                 )
 
-    prun_stats, global_plot = plot_global_report(pruning_dict,
-                                                 event_dict,
-                                                 feature_dict,
-                                                 prun_indexes,
-                                                 event_data,
-                                                 feat_data
-                                                 )
+    prun_stats, global_plot = \
+        plot_global_report(pruning_dict, event_dict, feature_dict, prun_indexes,
+                           event_data, feat_data
+                           )
 
     return prun_stats, global_plot

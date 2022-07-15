@@ -13,6 +13,7 @@
 #  limitations under the License.
 import pandas as pd
 import numpy as np
+from timeshap.utils import make_list, calculate_list_intersection
 
 
 def filter_dataset(data: pd.DataFrame,
@@ -20,6 +21,24 @@ def filter_dataset(data: pd.DataFrame,
                    rs: int,
                    nsamples: int
                    ) -> pd.DataFrame:
+    """Filters explanation dataset given parameters
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        Explanation Data
+
+    tol: float
+
+    rs: int
+
+    nsamples: int
+
+    Returns
+    -------
+    pd.DataFrame
+        Filtered explanations
+    """
     filtered_data = data[
         (data['Tolerance'] == tol) & (data['Random Seed'] == rs) & (
                     data['NSamples'] == nsamples)
@@ -28,24 +47,37 @@ def filter_dataset(data: pd.DataFrame,
 
 
 def find_parameters_to_plot(event_dict: dict,
-                           feature_dict: dict,
-                           event_data: pd.DataFrame,
-                           feat_data: pd.DataFrame
-                           ):
-    def make_list(element):
-        if isinstance(element, (int, float)):
-            element = [element]
-        elif isinstance(element, list):
-            pass
-        else:
-            raise ValueError("Unrecognized parameter format")
-        return element
+                            feature_dict: dict,
+                            event_data: pd.DataFrame,
+                            feat_data: pd.DataFrame
+                            ):
+    """Finds parameters to plot given explanation data and user configs
 
-    def calculate_list_intersection(A: list, B: list):
-        intersection = list(set(A).intersection(set(B)))
-        assert len(intersection) > 0, "Asking to plot parameter not present on data"
-        return intersection
+    Parameters
+    ----------
+    event_dict: dict
+        Information required for the event level explanation calculation
 
+    feature_dict: dict
+        Information required for the feature level explanation calculation
+
+    event_data: pd.DataFrame
+        Event explanations to plot
+
+    feat_data: pd.DataFrame
+        Feature explanations to plot
+
+    Returns
+    -------
+    list
+        tolerances to plot
+
+    list
+        random seeds to plot
+
+    list
+        nsamples to plot
+    """
     event_data_nsamples = list(np.unique(event_data["NSamples"].values))
     event_data_rs = list(np.unique(event_data["Random Seed"].values))
     event_data_tol = list(np.unique(event_data["Tolerance"].values))

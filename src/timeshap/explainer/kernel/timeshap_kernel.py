@@ -58,7 +58,7 @@ log = logging.getLogger('shap')
 
 
 class TimeShapKernel(Kernel):
-    """Uses the Kernel SHAP method to explain the output of any function.
+    """Uses TimeSHAP Kernel SHAP method to explain the output of any function.
 
     TimeSHAP extends KernelSHAP to explain sequences of features on several axis.
     TimeSHAP calculates, event, feature, and cell level explanations.
@@ -68,19 +68,24 @@ class TimeShapKernel(Kernel):
 
     Parameters
     ----------
-    model : function
+    model: function
         User supplied function that takes a 3D array (# samples x # sequence length x # features)
         and computes the output of the model for those samples. The output can be a vector
         (# samples) or a matrix (# samples x # model outputs).
+        In order to use TimeSHAP in an optimized way, this model can also return the explained
+        model's hidden state.
 
     background : numpy.array or pd.DataFrame
-        The background instance to use for integrating out features. To determine the impact
+        The background event/sequence to use for integrating out features. To determine the impact
         of a feature, that feature is set to "missing" and the change in the model output
         is observed. Since most models aren't designed to handle arbitrary missing data at test
         time, we simulate "missing" by replacing the feature with the values it takes in the
         background dataset. So if the background dataset is a simple sample of all zeros, then
         we would approximate a feature being missing by setting it to zero.
-        Consider using the `time.shap.calc_avg_event` method for this instance
+        In TimeSHAP you can use an average event or average sequence.
+        When using average events, consider using `timeshap.calc_avg_event` method to obtain it.
+        When using average sequence, considering using `timeshap.calc_avg_sequence` method to obtain it.
+        Note that when using the average sequence, all sequences of the dataset need to be the same.
 
     rs: int
         Random seed for timeshap algorithm
@@ -138,7 +143,14 @@ class TimeShapKernel(Kernel):
         self.keep_index = kwargs.get("keep_index", False)
         self.keep_index_ordered = kwargs.get("keep_index_ordered", False)
 
-    def set_variables_up(self, X: Union[pd.DataFrame, np.ndarray]):
+    def set_variables_up(self, X: np.ndarray):
+        """Sets variables up for explanations
+
+        Parameters
+        ----------
+        X: Union[pd.DataFrame, np.ndarray]
+            Instance being explained
+        """
         if len(self.background.shape) == 2:
             # 2D background needs to be expanded
             if self.background.shape[0] > 1 and not self.background.shape[0] == X.shape[1]:
@@ -178,10 +190,15 @@ class TimeShapKernel(Kernel):
 
         if not self.mode == 'pruning' and self.returns_hs:
             if self.pruning_idx == 0:
+                # obtain the HS format
                 _, example_hs = self.model.f(X[:, -1:, :])
                 if isinstance(example_hs, tuple):
-                    self.instance_hs = tuple(np.zeros_like(example_hs[i]) for i, x in enumerate(example_hs))
-                    self.background_hs = tuple(np.zeros_like(example_hs[i]) for i, x in enumerate(example_hs))
+                    if isinstance(example_hs[0], tuple):
+                        self.instance_hs = tuple(tuple(np.zeros_like(example_hs[y_i][i_x]) for i_x, x in enumerate(y)) for y_i, y in enumerate(example_hs))
+                        self.background_hs = tuple(tuple(np.zeros_like(example_hs[y_i][i_x]) for i_x, x in enumerate(y)) for y_i, y in enumerate(example_hs))
+                    else:
+                        self.instance_hs = tuple(np.zeros_like(example_hs[i]) for i, x in enumerate(example_hs))
+                        self.background_hs = tuple(np.zeros_like(example_hs[i]) for i, x in enumerate(example_hs))
                 else:
                     self.instance_hs = np.zeros_like(example_hs)
                     self.background_hs = np.zeros_like(example_hs)
@@ -238,8 +255,8 @@ class TimeShapKernel(Kernel):
 
         Parameters
         ----------
-        X : numpy.array or pandas.DataFrame or any scipy.sparse matrix
-            A matrix of samples (# samples x # features) on which to explain the model's output.
+        X : numpy.array
+            A 3D matrix (#samples x #events x #features) on which to explain the model's output.
 
         nsamples : "auto" or int
             Number of times to re-evaluate the model when explaining each prediction. More samples
@@ -263,6 +280,7 @@ class TimeShapKernel(Kernel):
         attribute of the explainer). For models with vector outputs this returns a list
         of such matrices, one for each output.
         """
+        assert isinstance(X, np.ndarray), "Instance must be 3D numpy array"
         if self.mode == "pruning":
             assert pruning_idx is not None
         else:
@@ -271,9 +289,6 @@ class TimeShapKernel(Kernel):
         self.pruning_idx = int(pruning_idx)
 
         self.set_variables_up(X)
-
-        # Removed the input variability to receive pd.series and DataFrame
-        # TODO implement this variability?
 
         if sp.sparse.issparse(X) and not sp.sparse.isspmatrix_lil(X):
             X = X.tolil()
@@ -289,12 +304,6 @@ class TimeShapKernel(Kernel):
             else:
                 out[:] = explanation
             return out
-
-        elif X.shape[0] > 1:
-            # TODO In case we want to make a method to explain a
-            raise NotImplementedError()
-        else:
-            raise ValueError
 
     def explain(self, incoming_instance, **kwargs):
         # convert incoming input to a standardized iml object
@@ -355,10 +364,15 @@ class TimeShapKernel(Kernel):
         else:
             model_out = self.model.f(instance.x)
 
-
         self.fx = model_out[0]
         if not self.vector_out:
             self.fx = np.array([self.fx])
+
+        explained_score = (self.fx - self.fnull)[0]
+        if abs(explained_score) < 0.1:
+            raise ValueError(f"Score difference between baseline and instance ({explained_score}) is too low < 0.1."
+                             f"Baseline score: {self.fx[0]} | Instance score: {self.fnull[0]}."
+                             f"Consider choosing another baseline.")
 
         # if no features vary then no feature has an effect
         if self.M == 0:
@@ -610,25 +624,44 @@ class TimeShapKernel(Kernel):
             self.synth_data_index = np.tile(self.data.index_value, self.nsamples)
 
     def add_sample(self, x, m, w):
+        offset = self.nsamplesAdded * self.N
+        mask = m == 1.0
         if self.mode == "event":
-            self.event_add_sample(x, m)
+            self.event_add_sample(x, mask, offset)
         elif self.mode == "feature":
-            self.feat_add_sample(x, m)
+            self.feat_add_sample(x, mask, offset)
         elif self.mode == 'pruning':
-            self.pruning_add_sample(x, m)
+            self.pruning_add_sample(x, mask, offset)
         elif self.mode == "cell":
-            self.cell_add_sample(x, m)
+            self.cell_add_sample(x, mask, offset)
         else:
-            raise ValueError("`add_sample` - Mode not suported")
+            raise ValueError("`add_sample` - Mode not supported")
 
         self.maskMatrix[self.nsamplesAdded, :] = m
         self.kernelWeights[self.nsamplesAdded] = w
         self.nsamplesAdded += 1
 
-    def cell_add_sample(self, x, m):
-        offset = self.nsamplesAdded * self.N
-        mask = m == 1.0
+    def activate_background(self, x, offset):
+        # in case self.pruning_idx == sequence length, we dont prune anything.
+        if not self.pruning_idx == self.S:
+            if self.returns_hs:
+                # in case of using hidden state optimization, the background is the instance one
+                if isinstance(self.synth_hidden_states, tuple):
+                    if isinstance(self.synth_hidden_states[0], tuple):
+                        for i, i_layer_state in enumerate(self.synth_hidden_states):
+                            i_layer_state[0][:, offset:offset + self.N, :] = self.instance_hs[i][0]
+                            i_layer_state[1][:, offset:offset + self.N, :] = self.instance_hs[i][1]
+                    else:
+                        for i, i_layer_state in enumerate(self.synth_hidden_states):
+                            i_layer_state[:, offset:offset + self.N, :] = self.instance_hs[i]
+                else:
+                    self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
+            else:
+                # in case of not using hidden state optimization, we need to set the whole background to the original sequence
+                evaluation_data = x[0:1, :self.pruning_idx, :]
+                self.synth_data[offset:offset + self.N, :self.pruning_idx, :] = evaluation_data
 
+    def cell_add_sample(self, x, mask, offset):
         cells_to_preturb = self.cell_idx_keys[mask[: self.cell_idx_keys.shape[0]], :]
         relevent_events = np.unique(self.cell_idx_keys[:, 0])
         relevent_feats = np.unique(self.cell_idx_keys[:, 1])
@@ -639,23 +672,7 @@ class TimeShapKernel(Kernel):
 
         # BACKGROUND IS ACTIVE
         if self.special_cells[3] and mask[-self.special_cells[3]]:
-            # in case self.pruning_idx == sequence length, we dont prune anything.
-            if not self.pruning_idx == self.S:
-                if self.returns_hs:
-                    # in case of using hidden state optimization, the background is the instance one
-                    if isinstance(self.synth_hidden_states, tuple):
-                        if isinstance(self.synth_hidden_states[0], tuple):
-                            for i, i_layer_state in enumerate(self.synth_hidden_states):
-                                i_layer_state[0][:, offset:offset + self.N, :] = self.instance_hs[i][0]
-                                i_layer_state[1][:, offset:offset + self.N, :] = self.instance_hs[i][1]
-                        else:
-                            for i, i_layer_state in enumerate(self.synth_hidden_states):
-                                i_layer_state[:, offset:offset + self.N, :] = self.instance_hs[i]
-                    else:
-                        self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
-                else:
-                    evaluation_data = x[0:1, :self.pruning_idx, :]
-                    self.synth_data[offset:offset + self.N, :self.pruning_idx, :] = evaluation_data
+            self.activate_background(x, offset)
 
         # other cells are active (no relevant events or feats)
         if self.special_cells[2] and mask[-self.special_cells[2]]:
@@ -698,43 +715,11 @@ class TimeShapKernel(Kernel):
                 event = event - self.pruning_idx
             self.synth_data[offset:offset + self.N, event, feats] = evaluation_data
 
-    def pruning_add_sample(self, x, m):
-        offset = self.nsamplesAdded * self.N
-        mask = m == 1.0
-        if not len(mask) == 2:
-            raise ValueError("For pruning mode, masks must have size 2")
-        if mask[0]:
-            # cur active
-            evaluation_data = x[0:1, self.pruning_idx:, :]
-            self.synth_data[offset:offset + self.N, self.pruning_idx:, :] = evaluation_data
-        if mask[1]:
-            # background active
-            evaluation_data = x[0:1, :self.pruning_idx, :]
-            self.synth_data[offset:offset + self.N, :self.pruning_idx, :] = evaluation_data
-
-    def event_add_sample(self, x, m):
-        offset = self.nsamplesAdded * self.N
-        mask = m == 1.0
+    def event_add_sample(self, x, mask, offset):
         # there is a background and it is active
         if self.pruning_idx > 0 and mask[-1]:
-            # in case self.pruning_idx == sequence length, we dont prune anything.
-            if not self.pruning_idx == self.S:
-                if self.returns_hs:
-                    # in case of using hidden state optimization, the background is the instance one
-                    if isinstance(self.synth_hidden_states, tuple):
-                        if isinstance(self.synth_hidden_states[0], tuple):
-                            for i, i_layer_state in enumerate(self.synth_hidden_states):
-                                i_layer_state[0][:, offset:offset + self.N,:] = self.instance_hs[i][0]
-                                i_layer_state[1][:, offset:offset + self.N,:] = self.instance_hs[i][1]
-                        else:
-                            for i, i_layer_state in enumerate(self.synth_hidden_states):
-                                i_layer_state[:, offset:offset + self.N,:] = self.instance_hs[i]
-                    else:
-                        self.synth_hidden_states[:, offset:offset + self.N, :] = self.instance_hs
-                else:
-                    # in case of not using hidden state optimization, we need to set the whole background to the original sequence
-                    evaluation_data = x[0:1, :self.pruning_idx, :]
-                    self.synth_data[offset:offset + self.N, :self.pruning_idx, :] = evaluation_data
+            self.activate_background(x, offset)
+
         if self.pruning_idx > 0:
             # there is a background, so the last position of the mask is for it
             groups = self.varyingFeatureGroups[mask[:-1]]
@@ -747,39 +732,34 @@ class TimeShapKernel(Kernel):
             groups = [x-self.pruning_idx for x in groups]
         self.synth_data[offset:offset + self.N, groups, :] = evaluation_data
 
-    def feat_add_sample(self, x, m):
-        offset = self.nsamplesAdded * self.N
-        mask = m == 1.0
+    def feat_add_sample(self, x, mask, offset):
         #BACKGROUND IS ACTIVE
         if self.pruning_idx > 0 and mask[-1]:
-            # in case self.pruning_idx == sequence length, we dont prune anything.
-            if not self.pruning_idx == self.S:
-                if self.returns_hs:
-                    # in case of using hidden state optimization, the background is the instance one
-                    if isinstance(self.synth_hidden_states, tuple):
-                        if isinstance(self.synth_hidden_states[0], tuple):
-                            for i, i_layer_state in enumerate(self.synth_hidden_states):
-                                i_layer_state[0][:, offset:offset + self.N, :] = self.instance_hs[i][0]
-                                i_layer_state[1][:, offset:offset + self.N, :] = self.instance_hs[i][1]
-                        else:
-                            for i, i_layer_state in enumerate(self.synth_hidden_states):
-                                i_layer_state[:, offset:offset + self.N, :] = self.instance_hs[i]
-                    else:
-                        self.synth_hidden_states[:, offset:offset + self.N,:] = self.instance_hs
-                else:
-                    evaluation_data = x[0:1, :self.pruning_idx, :]
-                    self.synth_data[offset:offset + self.N, :self.pruning_idx,:] = evaluation_data
+            self.activate_background(x, offset)
 
         if self.pruning_idx > 0:
             # there is a background, so the last position of the mask is for it
             groups = self.varyingFeatureGroups[mask[:-1]]
         else:
             groups = self.varyingFeatureGroups[mask]
+
         evaluation_data = x[0:1, self.pruning_idx:, groups]
         if self.returns_hs:
             self.synth_data[offset:offset+self.N, :, groups] = evaluation_data
         else:
             self.synth_data[offset:offset+self.N, self.pruning_idx:, groups] = evaluation_data
+
+    def pruning_add_sample(self, x, mask, offset):
+        if not len(mask) == 2:
+            raise ValueError("For pruning mode, masks must have size 2")
+        if mask[0]:
+            # cur active
+            evaluation_data = x[0:1, self.pruning_idx:, :]
+            self.synth_data[offset:offset + self.N, self.pruning_idx:, :] = evaluation_data
+        if mask[1]:
+            # background active
+            evaluation_data = x[0:1, :self.pruning_idx, :]
+            self.synth_data[offset:offset + self.N, :self.pruning_idx, :] = evaluation_data
 
     def run(self):
         num_to_run = self.nsamplesAdded * self.N - self.nsamplesRun * self.N

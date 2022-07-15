@@ -25,6 +25,33 @@ def plot_global_report(pruning_dict: dict,
                        event_data: pd.DataFrame = None,
                        feat_data: pd.DataFrame = None
                        ):
+    """Plots global epxlanation plots
+
+    Parameters
+    ----------
+    pruning_dict: dict
+        Information required for the pruning algorithm
+
+    event_dict: dict
+        Information required for the event level explanation calculation
+
+    feature_dict: dict
+        Information required for the feature level explanation calculation
+
+    prun_indexes: pd.DataFrame
+        Global Pruning information
+
+    event_data: pd.DataFrame
+        Global event explanations to plot
+
+    feat_data: pd.DataFrame
+        Global feature explanations to plot
+
+    Returns
+    -------
+    altair.plot
+        The local report
+    """
 
     if prun_indexes is None:
         assert pruning_dict.get('path', False), "No data or path to data provided to calculate pruning statistics"
