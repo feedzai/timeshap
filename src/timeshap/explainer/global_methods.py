@@ -256,7 +256,7 @@ def global_report(f: Callable[[np.ndarray], np.ndarray],
                   max_instances: int = 10000,
                   verbose: bool = False,
                   ):
-    """ Calculates the global report and plots it.
+    """ Calculates the global report and plots it.\
 
     Parameters
     ----------

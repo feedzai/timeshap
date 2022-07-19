@@ -260,7 +260,7 @@ def local_pruning(f: Callable[[np.ndarray], np.ndarray],
         return coal_prun_idx, coal_plot_data
 
     if pruning_dict.get("path") is None or not os.path.exists(pruning_dict.get("path")):
-        print("No path to explainer data provided. Calculating data")
+        #print("No path to explainer data provided. Calculating data")
         if baseline is None:
             raise ValueError("Baseline is not defined")
         coal_prun_idx, coal_plot_data = calculate_pruning()

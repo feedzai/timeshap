@@ -208,10 +208,11 @@ def convert_to_indexes(model_features: List[Union[int, str]] = None,
     return model_features_index, entity_col_index, time_col_index
 
 
-def calc_avg_sequence(data: np.ndarray,
+def calc_avg_sequence(data: Union[pd.DataFrame, np.ndarray],
                       numerical_feats: List[Union[str, int]],
                       categorical_feats: List[Union[str, int]],
                       model_features=None,
+                      entity_col: str = None,
                       ) -> np.ndarray:
     """
     Calculates the average sequence of a dataset. Requires all sequences of the
@@ -222,21 +223,33 @@ def calc_avg_sequence(data: np.ndarray,
 
     Parameters
     ----------
-    data: pd.DataFrame
+    data: Union[pd.DataFrame, np.ndarray]
         Dataset to use for baseline calculation
 
-    numerical_feats: List
-        List of numerical features to calculate median of
+    numerical_feats: List[Union[str, int]]
+        List of numerical features or corresponding indexes to calculate median of
 
-    categorical_feats: List
-        List of categorical features to calculate mode of
+    categorical_feats: List[Union[str, int]]
+        List of numerical features or corresponding indexes to calculate mode of
+
+    model_features: List[str]
+        Model features to infer the indexes of schema. Needed when using strings to identify features
 
     Returns
     -------
     np.ndarray
         Average sequence to use in TimeSHAP
     """
-    assert len(data.shape) == 3, "To calculate average events, all sequences of the dataset must be of the same length"
+    if isinstance(data, pd.DataFrame):
+        assert entity_col is not None, "To calculate average sequence from DataFrame, entity_col is required"
+        sequences = data.groupby(entity_col)
+        seq_lens = sequences.size().values
+        assert np.array([x == seq_lens[0] for x in seq_lens]).all(), "All sequences must be the same length"
+        data = np.array([x[1].values for x in sequences])
+    elif isinstance(data, np.ndarray) and len(data.shape) == 3:
+        pass
+    else:
+        raise ValueError("Unrecognized data format")
     if len(numerical_feats) > 0 and isinstance(numerical_feats[0], str) or  len(categorical_feats) > 0 and isinstance(categorical_feats[0], str):
         # given features are not indexes
         assert model_features is not None and len(model_features), "When using feature names to identify them, specify the model features. Alternatively you can pass the indexes of the features directly"
@@ -249,13 +262,14 @@ def calc_avg_sequence(data: np.ndarray,
     numerical = np.median(data[:, :,  numerical_indexes], axis=0)
     if len(categorical_indexes) > 0:
         categorical = stats.mode(data[:, :,  categorical_indexes], axis=0)[0][0, :, :]
-        numerical = np.concatenate((numerical,categorical), axis=1)
-    return numerical
+        numerical = np.concatenate((numerical, categorical), axis=1)
+    return numerical.astype(float)
 
 
-def calc_avg_event(data: pd.DataFrame,
-                   numerical_feats: List[str],
-                   categorical_feats: List[str],
+def calc_avg_event(data: Union[pd.DataFrame, np.ndarray],
+                   numerical_feats: List[Union[str, int]],
+                   categorical_feats: List[Union[str, int]],
+                   model_features: List[str] = None,
                    ) -> pd.DataFrame:
     """
     Calculates the average event of a dataset. This event is repeated N times
@@ -269,21 +283,47 @@ def calc_avg_event(data: pd.DataFrame,
     data: pd.DataFrame
         Dataset to use for baseline calculation
 
-    numerical_feats: List
-        List of numerical features to calculate median of
+    numerical_feats: List[Union[str, int]]
+        List of numerical features or corresponding indexes to calculate median of
 
-    categorical_feats: List
-        List of categorical features to calculate mode of
+    categorical_feats: List[Union[str, int]]
+        List of numerical features or corresponding indexes to calculate mode of
+
+    model_features: List[str]
+        Model features to infer the indexes of schema. Needed when using strings to identify features
 
     Returns
     -------
     pd.DataFrame
         DataFrame with the median/mode of the features
     """
-    numerical = data[numerical_feats].astype(float).describe().loc[["50%"]].reset_index(drop=True)
-    categorical = data[categorical_feats].mode()
-    ordered_feats = [x for x in list(data.columns) if x in numerical_feats + categorical_feats]
-    return pd.concat([numerical, categorical], axis=1)[ordered_feats]
+    if len(numerical_feats) > 0 and isinstance(numerical_feats[0], str) or  len(categorical_feats) > 0 and isinstance(categorical_feats[0], str):
+        # given features are not indexes
+        if isinstance(data, pd.DataFrame):
+            model_features = list(data.columns)
+        else:
+            assert model_features is not None and len(model_features), "When using feature names to identify them, specify the model features. Alternatively you can pass the indexes of the features directly"
+        numerical_indexes = [model_features.index(x) for x in numerical_feats]
+        categorical_indexes = [model_features.index(x) for x in categorical_feats]
+        ordered_feats = numerical_feats + categorical_feats
+    else:
+        numerical_indexes = numerical_feats
+        categorical_indexes = categorical_feats
+        ordered_feats = numerical_indexes + categorical_indexes
+
+    if len(data.shape) == 3:
+        data = np.squeeze(data, axis=1)
+    elif len(data.shape) == 2:
+        data = data.values
+    else:
+        raise ValueError
+
+    numerical = np.median(data[:,  numerical_indexes], axis=0)
+    if len(categorical_indexes) > 0:
+        categorical = stats.mode(data[:, categorical_indexes], axis=0)[0][0, :]
+        numerical = np.concatenate((numerical,categorical), axis=0)
+
+    return pd.DataFrame([numerical], columns=ordered_feats)
 
 
 def get_score_of_avg_sequence(model, data: np.ndarray):

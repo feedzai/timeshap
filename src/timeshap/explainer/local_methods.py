@@ -67,13 +67,18 @@ def validate_local_input(f: Callable[[np.ndarray], np.ndarray],
         data_cols = set(data.columns)
         if model_features:
             assert set(model_features).issubset(data_cols), "When providing model features, these should be on the given DataFrame"
+        else:
+            print("Assuming all features are model features")
+            assert entity_col is None, "Entity col provided but no model features provided"
+            assert time_col is None, "Time col provided but no model features provided"
         if entity_col is not None:
-            assert set(entity_col).issubset(data_cols), "When providing entity feature, these should be on the given DataFrame"
+            assert entity_col in data_cols, "When providing entity feature, these should be on the given DataFrame"
+            assert len(np.unique(data[entity_col].values)) == 1, "For local report, provided data must contain one instance only"
         if time_col is not None:
-            assert set(time_col).issubset(data_cols), "When providing time feature, these should be on the given DataFrame"
+            assert time_col in data_cols, "When providing time feature, these should be on the given DataFrame"
     else:
         assert len(data.shape) == 3, "Provided data must be an numpy array with 3 dimensions"
-    assert data.shape[0] == 1, "For local report, provided data must contain one instance only"
+        assert data.shape[0] == 1, "For local report, provided data must contain one instance only"
 
     assert pruning_dict.get("tol") is not None, "Prunning dict must have tolerance attribute"
     assert isinstance(pruning_dict.get("tol"), (int, float)), "Provided tolerance must be a int or float"
@@ -170,7 +175,10 @@ def calc_local_report(f: Callable[[np.ndarray], np.ndarray],
     if isinstance(data, pd.DataFrame):
         if time_col is not None:
             data = data.sort_values(time_col)
-        data = data[model_features]
+        if model_features is not None:
+            data = data[model_features]
+        else:
+            data = data.values
         data = np.expand_dims(data.to_numpy().copy(), axis=0)
 
     coal_plot_data, coal_prun_idx = local_pruning(f, data, pruning_dict, baseline, entity_uuid, entity_col, verbose)

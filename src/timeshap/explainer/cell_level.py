@@ -130,7 +130,7 @@ def considered_cells(event_data: pd.DataFrame,
     Returns
     -------
     Tuple[Tuple[List, List], Tuple[List, List]]
-        Events and features to include in cell levle computations
+        Events and features to include in cell level computations
         and their respective name
     """
     top_events_idx, top_events_names = cell_top_events(event_data, **kwargs)

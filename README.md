@@ -11,7 +11,8 @@ This repository is the code implementation of the TimeSHAP algorithm
 present in the paper `TimeSHAP: Explaining Recurrent Models through Sequence Perturbations`
 published at **KDD 2021**. 
 
-Links to the paper [here](https://arxiv.org/abs/2012.00073), and to the video presentation [here](https://www.youtube.com/watch?v=Q7Q9o7ywXx8).
+Links to the paper [here](https://arxiv.org/abs/2012.00073), 
+and to the video presentation [here](https://www.youtube.com/watch?v=Q7Q9o7ywXx8).
 
 
 ## Install TimeSHAP
@@ -67,10 +68,17 @@ import timeshap
 
 In order for TimeSHAP to explain a model, an entry point must be provided.
 This `Callable` entry point must receive a 3-D numpy array, `(#sequences; #sequence length; #features)`
-and return a 2-D numpy array `(#sequences; 1)` with the corresponding score of each sequence. 
-In addition, to make TimeSHAP more optimized, it is possible to return the hidden state
-of the model together with the score (if applicable), although this is optional.
+and return a 2-D numpy array `(#sequences; 1)` with the corresponding score of each sequence.
 
+In addition, to make TimeSHAP more optimized, it is possible to return the **hidden state**
+of the model together with the score (if applicable). Although this is optional, we highly recommended it, 
+as it has a very high impact. 
+If you choose to return the hidden state, this hidden state should either be: 
+(see [notebook](notebooks/AReM/AReM_API_showcase.ipynb) for specific examples)
+ - a 3-D numpy array, `(#rnn layers, #sequences, #hidden_dimension)` (class `ExplainedRNN` on notebook);
+ - a tuple of numpy arrays that follows the previously described characteristic 
+ (usually used when using stacked RNNs with different hidden dimensions) (class `ExplainedGRU2Layer` on notebook); 
+ - a tuple of tuples of numpy arrays (usually used when using LSTM's) (class `ExplainedLSTM` on notebook);;
 TimeSHAP is able to explain any black-box model as long as it complies with the 
 previously described interface, including both PyTorch and TensorFlow models, 
 both examplified in our tutorials ([PyTorch](notebooks/AReM/AReM.ipynb), [TensorFlow](notebooks/AReM/AReM_TF.ipynb)).
@@ -98,7 +106,8 @@ of explained models as they allow:
 on GPU memory, and therefore batching mechanisms are required;
 - **Input format/type**: useful when your model does not work with numpy arrays. This
 is the case of our provided PyToch example; 
-
+- **Hidden state logic**: useful when the hidden states of your models do not match
+the hidden state format required by TimeSHAP
 
 
 ### TimeSHAP Explanation Methods
