@@ -297,8 +297,8 @@ def feat_explain_all(f: Callable,
         # make_predictions = ~np.array(conditions).all()
 
     if make_predictions:
-        random_seeds = feat_dict.get('rs')
-        nsamples = feat_dict.get('nsamples')
+        random_seeds = list(np.unique(feat_dict.get('rs')))
+        nsamples = list(np.unique(feat_dict.get('nsamples')))
         names = ["Random Seed", "NSamples", "Feature",  "Shapley Value", "Entity", 'Tolerance']
 
         if file_path is not None:

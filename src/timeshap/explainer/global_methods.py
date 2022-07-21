@@ -22,7 +22,7 @@ from timeshap.explainer.feature_level import verify_feature_dict
 
 from timeshap.plot import plot_global_report
 import os
-from timeshap.utils import convert_to_indexes, convert_data_to_3d
+from timeshap.utils import convert_to_indexes, convert_data_to_3d, validate_input
 
 
 def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
@@ -30,11 +30,11 @@ def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
                           pruning_dict: dict,
                           event_dict: dict,
                           feature_dict: dict,
+                          baseline: Union[pd.DataFrame, np.array] = None,
                           model_features: List[Union[int, str]] = None,
                           schema: List[str] = None,
                           entity_col: Union[int, str] = None,
                           time_col: Union[int, str] = None,
-                          baseline: Union[pd.DataFrame, np.array] = None,
                           append_to_files: bool = False,
                           verbose: bool = False,
                           ):
@@ -85,41 +85,7 @@ def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
         If process is verbose
 
     """
-    assert isinstance(f, Callable), "Provided model must be callable"
-    assert isinstance(data, (pd.DataFrame, np.ndarray)), "Provided data must be an numpy array or pandas DataFrame"
-    assert baseline is None or isinstance(baseline, (pd.DataFrame, np.ndarray)), "Provided baseline must be an numpy array or pandas DataFrame"
-    assert model_features is None or (isinstance(model_features, list) and isinstance(model_features[0], (int, str))), "Model features must be a list of features (str) or their corresponding indexes(ints)"
-    assert entity_col is None or isinstance(entity_col, (int, str)), "Provided entity column must be a feature name (str) or the corresponding index (int)"
-    assert time_col is None or isinstance(time_col, (int, str)), "Provided time column must be a feature name (str) or the corresponding index (int)"
-
-    if model_features is None:
-        raise NotImplementedError()
-
-    elif isinstance(model_features[0], str) or \
-        (entity_col is not None and isinstance(entity_col, str)) or \
-        (time_col is not None and isinstance(time_col, str)):
-        # we have strings to obtain indexes, therefore we need the schema
-        assert schema is not None, "When model features, entity column or time column are strings, data schema must be provided"
-        assert isinstance(schema, list), "Provided schema must be a list of strings"
-        assert isinstance(schema[0], str), "Provided schema must be a list of strings"
-        assert data.shape[-1] >= len(model_features), "Provided model features do not match data"
-        assert data.shape[-1] == len(schema), "Provided schema does not match data"
-        assert set(model_features).issubset(set(schema)), "Provided model features must be in the provided schema"
-
-        if time_col is not None and isinstance(time_col, str):
-            assert time_col in schema, "Provided time feature must be in the provided schema"
-
-        if entity_col is not None and isinstance(entity_col, str):
-            assert entity_col in schema, "Provided entity feature must be in the provided schema"
-    else:
-        # we are dealing with indexes
-        # these columns must not be model features
-        assert entity_col is None or entity_col not in model_features, "Provided entity col index must not be on model feature indexes"
-        assert time_col is None or time_col not in model_features, "Provided time col index must not be on model feature indexes"
-        assert data.shape[-1] >= len(model_features), "Higher number of model features provided than present in data"
-
-    if isinstance(data, pd.DataFrame):
-        assert entity_col is not None, "Entity column must be provided when using DataFrames as data"
+    validate_input(f, data, baseline, model_features, schema, entity_col, time_col)
 
     if isinstance(data, np.ndarray):
         if len(data.shape) == 2:
@@ -222,8 +188,8 @@ def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
         schema = list(data.columns)
 
     validate_global_input(
-        f, data, pruning_dict, event_dict, feature_dict, model_features,
-        schema, entity_col, time_col, baseline, append_to_files, verbose)
+        f, data, pruning_dict, event_dict, feature_dict, baseline, model_features,
+        schema, entity_col, time_col, append_to_files, verbose)
 
     model_features_index, entity_col_index, time_col_index = convert_to_indexes(model_features, schema, entity_col, time_col)
     data = convert_data_to_3d(data, entity_col_index, time_col_index)

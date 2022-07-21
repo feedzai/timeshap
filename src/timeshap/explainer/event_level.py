@@ -282,8 +282,8 @@ def event_explain_all(f: Callable,
         # make_predictions = ~np.array(conditions).all()
 
     if make_predictions:
-        random_seeds = event_dict.get('rs')
-        nsamples = event_dict.get('nsamples')
+        random_seeds = list(np.unique(event_dict.get('rs')))
+        nsamples = list(np.unique(event_dict.get('nsamples')))
         names = ["Random Seed", "NSamples", "Event", "Shapley Value", "t (event index)", "Entity", 'Tolerance']
 
         if file_path is not None:

@@ -360,7 +360,7 @@ def prune_all(f: Callable,
         schema = list(data.columns)
     verify_pruning_dict(pruning_dict)
     file_path = pruning_dict.get('path')
-    tolerances = pruning_dict.get('tol')
+    tolerances = list(np.unique(pruning_dict.get('tol')))
     make_predictions = True
     prun_data = None
     if file_path is not None and os.path.exists(file_path) and not append_to_files:

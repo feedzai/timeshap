@@ -24,7 +24,7 @@ vectorize_round = np.vectorize(roundresult)
 class TestFeatureLevel(unittest.TestCase):
     def setUp(self) -> None:
         self.baseline = get_baseline()
-        self.instance = get_instance()
+        self.instance = np.expand_dims(get_instance().values[:, :6], axis=0)
         self.model_mock = MagicMock()
 
     def test_feature_hs(self):

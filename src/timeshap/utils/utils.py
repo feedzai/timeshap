@@ -12,11 +12,51 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import List, Union
+from typing import List, Union, Callable
 import pandas as pd
 import numpy as np
 import copy
 from scipy import stats
+
+
+def validate_input(f, data, baseline, model_features, schema, entity_col, time_col):
+    assert isinstance(f, Callable), "Provided model must be callable"
+    assert isinstance(data, (pd.DataFrame, np.ndarray)), "Provided data must be an numpy array or pandas DataFrame"
+    assert baseline is None or isinstance(baseline, (pd.DataFrame, np.ndarray)), "Provided baseline must be an numpy array or pandas DataFrame"
+    assert model_features is None or (isinstance(model_features, list) and isinstance(model_features[0], (int, str))), "Model features must be a list of features (str) or their corresponding indexes(ints)"
+    assert entity_col is None or isinstance(entity_col, (int, str)), "Provided entity column must be a feature name (str) or the corresponding index (int)"
+    assert time_col is None or isinstance(time_col, (int, str)), "Provided time column must be a feature name (str) or the corresponding index (int)"
+
+    if model_features is None:
+        print("Assuming all features are model features")
+
+    elif isinstance(model_features[0], str) or \
+        (entity_col is not None and isinstance(entity_col, str)) or \
+        (time_col is not None and isinstance(time_col, str)):
+        # we have strings to obtain indexes, therefore we need the schema
+        if isinstance(data, pd.DataFrame):
+            schema = list(data.columns)
+        assert schema is not None, "When model features, entity column or time column are strings, data schema must be provided"
+        assert isinstance(schema, list), "Provided schema must be a list of strings"
+        assert isinstance(schema[0], str), "Provided schema must be a list of strings"
+        assert data.shape[-1] >= len(model_features), "Provided model features do not match data"
+        assert data.shape[-1] == len(schema), "Provided schema does not match data"
+        assert set(model_features).issubset(set(schema)), "Provided model features must be in the provided schema"
+
+        if time_col is not None and isinstance(time_col, str):
+            assert time_col in schema, "Provided time feature must be in the provided schema"
+
+        if entity_col is not None and isinstance(entity_col, str):
+            assert entity_col in schema, "Provided entity feature must be in the provided schema"
+    else:
+        # we are dealing with indexes
+        # these columns must not be model features
+        assert entity_col is None or entity_col not in model_features, "Provided entity col index must not be on model feature indexes"
+        assert time_col is None or time_col not in model_features, "Provided time col index must not be on model feature indexes"
+        assert data.shape[-1] >= len(model_features), "Higher number of model features provided than present in data"
+
+    if isinstance(data, pd.DataFrame):
+        assert entity_col is not None, "Entity column must be provided when using DataFrames as data"
 
 
 def make_list(element) -> list:
@@ -89,7 +129,7 @@ def get_tolerances_to_test(pruning_data: pd.DataFrame,
     else:
         tolerances_to_calc = np.unique(pruning_data['Tolerance'].values)
         tolerances_to_calc = tolerances_to_calc[~(tolerances_to_calc == -1)]
-        input_tols = explanation_dict.get('tol')
+        input_tols = list(np.unique(explanation_dict.get('tol', tolerances_to_calc)))
         if input_tols is not None:
             assert np.array([x in tolerances_to_calc for x in input_tols]).all(), "Inputed tolerances are not present on the provided pruning data"
             tolerances_to_calc = input_tols
