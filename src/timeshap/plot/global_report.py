@@ -76,17 +76,18 @@ def plot_global_report(pruning_dict: dict,
     for tolerance in plot_tols:
         for rs in plot_rs:
             for nsamples in plot_nsamples:
+
                 plot_event_data = filter_dataset(event_data, tolerance, rs, nsamples)
                 event_global_plot = plot_global_event(plot_event_data)
 
                 plot_feat_data = filter_dataset(feat_data, tolerance, rs, nsamples)
                 feat_global_plot = plot_global_feat(plot_feat_data, **feature_dict)
 
-                horizontal_plot = (event_global_plot | feat_global_plot).resolve_scale(color='independent')
+                horizontal_plot = alt.hconcat(event_global_plot, feat_global_plot, center=True)
 
-                horizontal_plot.title = f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
-                horizontal_plot.center = True
-
+                horizontal_plot.properties(
+                    title=f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
+                )
                 final_plot &= horizontal_plot
 
     return pruning_stats, final_plot

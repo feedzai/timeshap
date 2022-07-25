@@ -167,7 +167,9 @@ def plot_global_feat(feat_data: pd.DataFrame,
                 param_plot = plot(filtered_data, top_x_feats, threshold, plot_features)
 
                 if multi_plot:
-                    param_plot.title = f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
+                    param_plot.properties(
+                        title=f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
+                    )
                 final_plot &= param_plot
 
     return final_plot
