@@ -78,6 +78,8 @@ def plot_cell_level(cell_data: pd.DataFrame,
 
     filtered_cell_data = cell_data[~np.logical_and(cell_data['Event'] == 'Pruned Events', cell_data['Feature'] == 'Pruned Events')]
 
+    if plot_parameters is None:
+        plot_parameters = {}
     height = plot_parameters.get('height', 225)
     width = plot_parameters.get('width', 200)
     axis_lims = plot_parameters.get('axis_lim', [-.5, .5])
