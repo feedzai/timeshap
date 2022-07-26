@@ -12,5 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 """The TimeSHAP package"""
-
+import altair as alt
 from .version import __version__
+
+alt.themes.enable("feedzai")
