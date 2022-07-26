@@ -18,11 +18,13 @@ import altair as alt
 import re
 import copy
 from typing import List
+import math
 
 
 def plot_cell_level(cell_data: pd.DataFrame,
                     model_features: List[str],
                     plot_features: dict,
+                    plot_parameters: dict = None,
                     ):
     """Plots local feature explanations
 
@@ -36,6 +38,13 @@ def plot_cell_level(cell_data: pd.DataFrame,
 
     plot_features: dict
         Dict containing mapping between model features and display features
+
+    plot_parameters: dict
+        Dict containing optinal plot parameters
+            'height': height of the plot, default 225
+            'width': width of the plot, default 200
+            'axis_lims': plot Y domain, default [-0.5, 0.5]
+            'FontSize': plot font size, default 15
 
     Returns
     -------
@@ -69,11 +78,13 @@ def plot_cell_level(cell_data: pd.DataFrame,
 
     filtered_cell_data = cell_data[~np.logical_and(cell_data['Event'] == 'Pruned Events', cell_data['Feature'] == 'Pruned Events')]
 
-    height = 225
-    width = 200
+    height = plot_parameters.get('height', 225)
+    width = plot_parameters.get('width', 200)
+    axis_lims = plot_parameters.get('axis_lim', [-.5, .5])
+    fontsize = plot_parameters.get('FontSize', 15)
 
     c = alt.Chart().encode(
-        y=alt.Y('Feature', axis=alt.Axis(domain=False, labelFontSize=15, title=None), sort=sort_features),
+        y=alt.Y('Feature', axis=alt.Axis(domain=False, labelFontSize=fontsize, title=None), sort=sort_features),
     )
 
     a = c.mark_rect().encode(
@@ -81,20 +92,20 @@ def plot_cell_level(cell_data: pd.DataFrame,
         color=alt.Color('rounded', title=None,
                         legend=alt.Legend(gradientLength=height,
                                           gradientThickness=10, orient='right',
-                                          labelFontSize=15),
-                        scale=alt.Scale(domain=[-.5, .5], range=c_range))
+                                          labelFontSize=fontsize),
+                        scale=alt.Scale(domain=axis_lims, range=c_range))
     )
     b = c.mark_text(align='right', baseline='middle', dx=18, fontSize=15,
                     color='#798184').encode(
             x=alt.X('Event', sort=sort_events,
                     axis=alt.Axis(orient="top", title='Shapley Value', domain=False,
                                   titleY=height + 20, titleX=172, labelAngle=30,
-                                  labelFontSize=15, )),
+                                  labelFontSize=fontsize, )),
             text='rounded_str',
     )
 
     cell_plot = alt.layer(a, b, data=filtered_cell_data).properties(
-        width=160,
+        width=math.ceil(0.8*width),
         height=height
     )
 
@@ -112,16 +123,16 @@ def plot_cell_level(cell_data: pd.DataFrame,
                                                      title=None)), )
 
         a = c.mark_rect().encode(
-            x=alt.X('Event', axis=alt.Axis(titleFontSize=15)),
+            x=alt.X('Event', axis=alt.Axis(titleFontSize=fontsize)),
             color=alt.Color('rounded', title=None, legend=None,
-                            scale=alt.Scale(domain=[-.5, .5], range=c_range))
+                            scale=alt.Scale(domain=axis_lims, range=c_range))
         )
-        b = c.mark_text(align='right', dx=18, baseline='middle', fontSize=15,
+        b = c.mark_text(align='right', dx=18, baseline='middle', fontSize=fontsize,
                         color='#798184').encode(
             x=alt.X('Event',
                     axis=alt.Axis(labelOffset=24, labelPadding=30, orient="top",
                                   title=None, domain=False, labelAngle=0,
-                                  labelFontSize=15, )),
+                                  labelFontSize=fontsize, )),
             text='rounded_str',
         )
 

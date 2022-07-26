@@ -16,7 +16,7 @@ import pandas as pd
 import numpy as np
 import copy
 import altair as alt
-from timeshap.plot.utils import filter_dataset
+from timeshap.plot.utils import multi_plot_wrapper
 
 
 def plot_feat_barplot(feat_data: pd.DataFrame,
@@ -72,9 +72,10 @@ def plot_feat_barplot(feat_data: pd.DataFrame,
 
 
 def plot_global_feat(feat_data: pd.DataFrame,
-                     top_x_feats=12,
-                     threshold=None,
-                     plot_features=None,
+                     top_x_feats: int = 12,
+                     threshold: float = None,
+                     plot_features: dict = None,
+                     plot_parameters: dict = None,
                      **kwargs
                      ):
     """ Plots global feature plots
@@ -87,17 +88,24 @@ def plot_global_feat(feat_data: pd.DataFrame,
     top_x_feats: int
         The number of feature to display.
 
-    threshold: int
+    threshold: float
         The minimum absolute importance that a feature needs to have to be displayed
 
     plot_features: dict
         Dict containing mapping between model features and display features
 
+    plot_parameters: dict
+        Dict containing optional plot parameters
+            'height': height of the plot, default 280
+            'width': width of the plot, default 288
+            'axis_lims': plot Y domain, default [-0.2, 0.6]
+            'FontSize': plot font size, default 13
+
     Returns
     -------
     altair.plot
     """
-    def plot(feat_data, top_x_feats, threshold, plot_features):
+    def plot(feat_data, top_x_feats, threshold, plot_features, plot_parameters):
         avg_df = feat_data.groupby('Feature').mean()['Shapley Value']
         if threshold is None and len(avg_df) >= top_x_feats:
             sorted_series = avg_df.abs().sort_values(ascending=False)
@@ -130,13 +138,20 @@ def plot_global_feat(feat_data: pd.DataFrame,
             feat_data['Feature'] = feat_data['Feature'].apply(lambda x: plot_features[x])
             sort_features = [plot_features[x] for x in sort_features]
 
+        if plot_parameters is None:
+            plot_parameters = {}
+        height = plot_parameters.get('height', 280)
+        width = plot_parameters.get('width', 288)
+        axis_lims = plot_parameters.get('axis_lim', [-0.2, 0.6])
+        fontsize = plot_parameters.get('FontSize', 13)
+
         global_feats_plot = alt.Chart(feat_data).mark_point(stroke='white',
                                                              strokeWidth=.6).encode(
             x=alt.X('Shapley Value', axis=alt.Axis(title='Shapley Value', grid=True),
-                    scale=alt.Scale(domain=[-0.2, 0.6])),
+                    scale=alt.Scale(domain=axis_lims)),
             y=alt.Y('Feature:O',
                     sort=sort_features,
-                    axis=alt.Axis(labelFontSize=13, titleX=-51)),
+                    axis=alt.Axis(labelFontSize=fontsize, titleX=-51)),
             color=alt.Color('type',
                             scale=alt.Scale(domain=['Shapley Value', 'Mean'],
                                             range=["#618FE0", '#d76d58']),
@@ -148,28 +163,9 @@ def plot_global_feat(feat_data: pd.DataFrame,
             size=alt.condition(alt.datum.type == 'Mean', alt.value(70),
                                alt.value(30)),
         ).properties(
-            width=288,
-            height=280
+            width=width,
+            height=height
         )
         return global_feats_plot
 
-    feat_data_nsamples = list(np.unique(feat_data["NSamples"].values))
-    feat_data_rs = list(np.unique(feat_data["Random Seed"].values))
-    feat_data_tol = list(np.unique(feat_data["Tolerance"].values))
-
-    multi_plot = True if len(feat_data_nsamples) > 1 or len(feat_data_rs) > 1 or len(feat_data_tol) > 1 else False
-    final_plot = alt.vconcat()
-
-    for tolerance in feat_data_tol:
-        for rs in feat_data_rs:
-            for nsamples in feat_data_nsamples:
-                filtered_data = filter_dataset(feat_data, tolerance, rs, nsamples)
-                param_plot = plot(filtered_data, top_x_feats, threshold, plot_features)
-
-                if multi_plot:
-                    param_plot.properties(
-                        title=f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
-                    )
-                final_plot &= param_plot
-
-    return final_plot
+    return multi_plot_wrapper(feat_data, plot, (top_x_feats, threshold, plot_features, plot_parameters))

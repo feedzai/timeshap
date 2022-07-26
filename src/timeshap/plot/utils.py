@@ -14,6 +14,30 @@
 import pandas as pd
 import numpy as np
 from timeshap.utils import make_list, calculate_list_intersection
+import altair as alt
+
+
+def multi_plot_wrapper(explanation_data, method, parameters):
+    data_nsamples = list(np.unique(explanation_data["NSamples"].values))
+    data_rs = list(np.unique(explanation_data["Random Seed"].values))
+    data_tol = list(np.unique(explanation_data["Tolerance"].values))
+
+    multi_plot = True if len(data_nsamples) > 1 or len(data_rs) > 1 or len(data_tol) > 1 else False
+    final_plot = alt.vconcat()
+
+    for tolerance in data_tol:
+        for rs in data_rs:
+            for nsamples in data_nsamples:
+                filtered_data = filter_dataset(explanation_data, tolerance, rs, nsamples)
+                param_plot = method(filtered_data, {}) if parameters is None else method(filtered_data, *parameters)
+
+                if multi_plot:
+                    param_plot.properties(
+                        title=f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
+                    )
+                final_plot &= param_plot
+
+    return final_plot
 
 
 def filter_dataset(data: pd.DataFrame,

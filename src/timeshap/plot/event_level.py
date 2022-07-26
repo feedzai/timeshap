@@ -17,7 +17,7 @@ import copy
 import re
 import altair as alt
 import numpy as np
-from timeshap.plot.utils import filter_dataset
+from timeshap.plot.utils import multi_plot_wrapper
 
 
 def plot_event_heatmap(event_data: pd.DataFrame,
@@ -83,7 +83,8 @@ def plot_event_heatmap(event_data: pd.DataFrame,
     return event_plot
 
 
-def plot_global_event(event_data: pd.DataFrame
+def plot_global_event(event_data: pd.DataFrame,
+                      plot_parameters: dict = None,
                       ):
     """Plots global event explanations
 
@@ -92,11 +93,18 @@ def plot_global_event(event_data: pd.DataFrame
     event_data: pd.DataFrame
         Event global explanations
 
+    plot_parameters: dict
+        Dict containing optional plot parameters
+            'height': height of the plot, default 150
+            'width': width of the plot, default 360
+            'axis_lims': plot Y domain, default [-0.3, 0.9]
+            't_limit': number of events to plot, default -20
+
     Returns
     -------
     altair.plot
     """
-    def plot(event_data: pd.DataFrame):
+    def plot(event_data: pd.DataFrame, plot_parameters):
         event_data = copy.deepcopy(event_data)
         event_data = event_data[event_data['t (event index)'] < 1]
         event_data = event_data[['Shapley Value', 't (event index)']]
@@ -108,13 +116,22 @@ def plot_global_event(event_data: pd.DataFrame
         for index, value in avg_df.items():
             event_data = event_data.append({'t (event index)': index, 'Shapley Value': value, 'type': 'Mean'}, ignore_index=True)
 
-        event_data = event_data[event_data['t (event index)'] >= -20]
-        event_data = event_data[event_data['Shapley Value'] >= -0.3]
+        if plot_parameters is None:
+            plot_parameters = {}
+
+        height = plot_parameters.get('height', 150)
+        width = plot_parameters.get('width', 360)
+        axis_lims = plot_parameters.get('axis_lim', [-0.3, 0.9])
+        t_limit = plot_parameters.get('axis_lim', -20)
+
+        event_data = event_data[event_data['t (event index)'] >= t_limit]
+        event_data = event_data[event_data['Shapley Value'] >= axis_lims[0]]
+        event_data = event_data[event_data['Shapley Value'] <= axis_lims[1]]
 
         global_event = alt.Chart(event_data).mark_point(stroke='white',
                                                       strokeWidth=.6).encode(
             y=alt.Y('Shapley Value', axis=alt.Axis(grid=True, titleX=-23),
-                    title="Shapley Value", scale=alt.Scale(domain=[-0.3, 0.9], )),
+                    title="Shapley Value", scale=alt.Scale(domain=axis_lims, )),
             x=alt.X('t (event index):O', axis=alt.Axis(labelAngle=0)),
             color=alt.Color('type',
                             scale=alt.Scale(domain=['Shapley Value', 'Mean'],
@@ -127,29 +144,10 @@ def plot_global_event(event_data: pd.DataFrame
             size=alt.condition(alt.datum.type == 'Mean', alt.value(70),
                                alt.value(30)),
         ).properties(
-            width=360,
-            height=150
+            width=width,
+            height=height,
         )
 
         return global_event
 
-    event_data_nsamples = list(np.unique(event_data["NSamples"].values))
-    event_data_rs = list(np.unique(event_data["Random Seed"].values))
-    event_data_tol = list(np.unique(event_data["Tolerance"].values))
-
-    multi_plot = True if len(event_data_nsamples) > 1 or len(event_data_rs) > 1 or len(event_data_tol) > 1 else False
-    final_plot = alt.vconcat()
-
-    for tolerance in event_data_tol:
-        for rs in event_data_rs:
-            for nsamples in event_data_nsamples:
-                filtered_data = filter_dataset(event_data, tolerance, rs, nsamples)
-                param_plot = plot(filtered_data)
-
-                if multi_plot:
-                    param_plot.properties(
-                        title=f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
-                    )
-                final_plot &= param_plot
-
-    return final_plot
+    return multi_plot_wrapper(event_data, plot, (plot_parameters))
