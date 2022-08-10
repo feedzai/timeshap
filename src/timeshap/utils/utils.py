@@ -422,5 +422,5 @@ def get_avg_score_with_avg_event(model, med, top=1000):
             pred = model(tiled_background)
         else:
             pred, hs = model(expanded_copy, hs)
-        avg_score[x] = float(pred[0])
+        avg_score[x] = round(float(pred[0]), 6)
     return avg_score
