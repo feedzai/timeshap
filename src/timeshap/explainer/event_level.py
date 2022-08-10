@@ -89,7 +89,7 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
                 entity_col: str,
                 baseline: Union[pd.DataFrame, np.array],
                 pruned_idx: int,
-                ):
+                ) -> pd.DataFrame:
     """Method to calculate event level explanations or load them if path is provided
 
     Parameters

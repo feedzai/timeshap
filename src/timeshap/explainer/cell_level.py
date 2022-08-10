@@ -258,7 +258,7 @@ def local_cell_level(f: Callable[[np.ndarray], np.ndarray],
                      entity_col,
                      baseline,
                      pruned_idx,
-                     ):
+                     ) -> pd.DataFrame:
     """Method to calculate event level explanations or load them if path is provided
 
     Parameters

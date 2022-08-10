@@ -20,8 +20,8 @@ import copy
 
 def plot_temp_coalition_pruning(df: pd.DataFrame,
                                 pruned_idx: int,
-                                plot_limit=50,
-                                solve_negatives=True,
+                                plot_limit: int = 50,
+                                solve_negatives: bool = True,
                                 ):
     """Plots the coalition explainer process
 
@@ -35,14 +35,10 @@ def plot_temp_coalition_pruning(df: pd.DataFrame,
 
     plot_limit: int
         Window of events to show the explainer to
+        Default is 50
 
     solve_negatives: bool
         Whether to remove negative importances of the background instances
-
-    Returns
-    -------
-    altair.plot
-        The local report
     """
 
     def solve_negatives_method(df):

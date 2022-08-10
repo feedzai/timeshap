@@ -15,9 +15,26 @@ import pandas as pd
 import numpy as np
 from timeshap.utils import make_list, calculate_list_intersection
 import altair as alt
+from typing import Tuple, Callable
 
 
-def multi_plot_wrapper(explanation_data, method, parameters):
+def multi_plot_wrapper(explanation_data: pd.DataFrame,
+                       method: Callable,
+                       parameters: tuple
+                       ):
+    """
+
+    Parameters
+    ----------
+    explanation_data: pd.DataFrame
+        Explanation Data
+
+    method: Callable
+        Plotter method
+
+    parameters: tuple
+        Plot parameters
+    """
     data_nsamples = list(np.unique(explanation_data["NSamples"].values))
     data_rs = list(np.unique(explanation_data["Random Seed"].values))
     data_tol = list(np.unique(explanation_data["Tolerance"].values))
@@ -74,7 +91,7 @@ def find_parameters_to_plot(event_dict: dict,
                             feature_dict: dict,
                             event_data: pd.DataFrame,
                             feat_data: pd.DataFrame
-                            ):
+                            ) -> Tuple[list, list, list]:
     """Finds parameters to plot given explanation data and user configs
 
     Parameters

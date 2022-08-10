@@ -22,7 +22,9 @@ from pathlib import Path
 from timeshap.utils import convert_to_indexes, convert_data_to_3d
 
 
-def calc_prun_indexes(df: pd.DataFrame, tol: Union[float, int, list]):
+def calc_prun_indexes(df: pd.DataFrame,
+                      tol: Union[float, int, list]
+                      ) -> pd.DataFrame:
     """Calculates the pruning indexes given pruning data and tolerances
 
     Parameters
@@ -54,7 +56,7 @@ def calc_prun_indexes(df: pd.DataFrame, tol: Union[float, int, list]):
 
 def pruning_statistics(df: pd.DataFrame,
                        tol: Union[float, list],
-                       ):
+                       ) -> pd.DataFrame:
     """Calculates global pruning statistics with the given tolerances.
 
     Parameters
@@ -93,7 +95,9 @@ def pruning_statistics(df: pd.DataFrame,
     return resume_df
 
 
-def prune_given_data(data: pd.DataFrame, tolerance: float) -> int:
+def prune_given_data(data: pd.DataFrame,
+                     tolerance: float,
+                     ) -> int:
     """Calculates the pruning index to prune the sequence to with a given tolerance
 
     Parameters

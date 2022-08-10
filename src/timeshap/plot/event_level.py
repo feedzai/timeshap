@@ -16,7 +16,6 @@ import pandas as pd
 import copy
 import re
 import altair as alt
-import numpy as np
 from timeshap.plot.utils import multi_plot_wrapper
 
 
@@ -28,11 +27,6 @@ def plot_event_heatmap(event_data: pd.DataFrame,
     ----------
     event_data: pd.DataFrame
         Event global explanations
-
-    Returns
-    -------
-    altair.plot
-
     """
     event_data = copy.deepcopy(event_data)
     # extract digit to order df by - this is redundant but gives security to the method
@@ -99,12 +93,8 @@ def plot_global_event(event_data: pd.DataFrame,
             'width': width of the plot, default 360
             'axis_lims': plot Y domain, default [-0.3, 0.9]
             't_limit': number of events to plot, default -20
-
-    Returns
-    -------
-    altair.plot
     """
-    def plot(event_data: pd.DataFrame, plot_parameters):
+    def plot(event_data: pd.DataFrame, plot_parameters: dict):
         event_data = copy.deepcopy(event_data)
         event_data = event_data[event_data['t (event index)'] < 1]
         event_data = event_data[['Shapley Value', 't (event index)']]

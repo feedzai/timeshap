@@ -52,11 +52,6 @@ def plot_local_report(pruning_dict: dict,
 
     cell_data: pd.DataFrame
         Cell explanations to plot
-
-    Returns
-    -------
-    altair.plot
-        The local report
     """
     if coal_plot_data is None:
         assert pruning_dict.get('path', False), "No data or path to data provided to calculate pruning statistics"

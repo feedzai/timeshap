@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import List, Union, Callable
+from typing import List, Union, Callable, Dict, Tuple
 import pandas as pd
 import numpy as np
 import copy
@@ -198,7 +198,7 @@ def convert_to_indexes(model_features: List[Union[int, str]] = None,
                        schema: List[str] = None,
                        entity_col: Union[int, str] = None,
                        time_col: Union[int, str] = None,
-                       ):
+                       ) -> Tuple[List[int], int, int]:
     """Converts features into indexes given a schema
 
     Parameters
@@ -251,7 +251,7 @@ def convert_to_indexes(model_features: List[Union[int, str]] = None,
 def calc_avg_sequence(data: Union[pd.DataFrame, np.ndarray],
                       numerical_feats: List[Union[str, int]],
                       categorical_feats: List[Union[str, int]],
-                      model_features=None,
+                      model_features: List[str] = None,
                       entity_col: str = None,
                       ) -> np.ndarray:
     """
@@ -274,6 +274,9 @@ def calc_avg_sequence(data: Union[pd.DataFrame, np.ndarray],
 
     model_features: List[str]
         Model features to infer the indexes of schema. Needed when using strings to identify features
+
+    entity_col: str
+        Entity column to identify sequences
 
     Returns
     -------
@@ -366,7 +369,7 @@ def calc_avg_event(data: Union[pd.DataFrame, np.ndarray],
     return pd.DataFrame([numerical], columns=ordered_feats)
 
 
-def get_score_of_avg_sequence(model, data: np.ndarray):
+def get_score_of_avg_sequence(model, data: np.ndarray) -> float:
     """Scores the average sequence
 
     Parameters
@@ -392,7 +395,10 @@ def get_score_of_avg_sequence(model, data: np.ndarray):
     return pred[0]
 
 
-def get_avg_score_with_avg_event(model, med, top=1000):
+def get_avg_score_with_avg_event(model,
+                                 med: Union[pd.DataFrame, np.ndarray],
+                                 top: int = 1000
+                                 ) -> Dict[int, float]:
     """Repeats the avg event N times and returns the score of the last
     event
 
@@ -401,10 +407,10 @@ def get_avg_score_with_avg_event(model, med, top=1000):
     model: Union[TimeSHAPWrapper, torch.nn.Module, tf.Module]
         An RNN model.
 
-    med:
+    med: Union[pd.DataFrame, np.ndarray]
         Average event of the dataset.
 
-    top:
+    top: int
         Limit to which repeat the evaluation
     Returns
     -------

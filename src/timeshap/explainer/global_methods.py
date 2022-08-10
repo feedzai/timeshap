@@ -12,7 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Tuple
 import numpy as np
 import pandas as pd
 from timeshap.explainer import prune_all, event_explain_all, feat_explain_all
@@ -126,7 +126,7 @@ def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
                              append_to_files: bool = False,
                              max_instances: int = 10000,
                              verbose: bool = False,
-                             ):
+                             ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """ Calculates global report explanations
 
     Parameters
@@ -169,6 +169,9 @@ def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
 
     append_to_files: bool
         Append explanations to files if file already exists
+
+    max_instances: int
+        Max number of instances to explain
 
     verbose: bool
         If process is verbose
@@ -276,6 +279,8 @@ def global_report(f: Callable[[np.ndarray], np.ndarray],
     Returns
     -------
     pd.DataFrame
+
+    altair.plot
     """
     prun_indexes, event_data, feat_data = \
         calc_global_explanations(f, data, pruning_dict, event_dict,

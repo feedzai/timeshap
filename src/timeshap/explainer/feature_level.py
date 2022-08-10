@@ -31,7 +31,7 @@ def feature_level(f: Callable,
                   pruned_idx: int,
                   random_seed: int,
                   nsamples: int,
-                  model_feats=None,
+                  model_feats: List[Union[int, str]] = None,
                   ) -> pd.DataFrame:
     """Method to calculate event level explanations
 
@@ -59,7 +59,7 @@ def feature_level(f: Callable,
     nsamples: int
         The number of coalitions for TimeSHAP to sample.
 
-    model_feats: List
+    model_feats: List[Union[int, str]]
         The list of feature names.
         If none is provided, "Feature 1" format is used
 
@@ -93,7 +93,7 @@ def local_feat(f: Callable[[np.ndarray], np.ndarray],
                entity_col: str,
                baseline: Union[pd.DataFrame, np.array],
                pruned_idx: int,
-               ):
+               ) -> pd.DataFrame:
     """Method to calculate event level explanations or load them if path is provided
 
     Parameters
@@ -212,7 +212,7 @@ def feat_explain_all(f: Callable,
                      time_col: Union[int, str] = None,
                      append_to_files: bool = False,
                      verbose: bool = False,
-                     ):
+                     ) -> pd.DataFrame:
     """Calculates event level explanations for all entities on the provided
     DataFrame applying pruning if explicit
 

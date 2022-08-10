@@ -46,11 +46,6 @@ def plot_global_report(pruning_dict: dict,
 
     feat_data: pd.DataFrame
         Global feature explanations to plot
-
-    Returns
-    -------
-    altair.plot
-        The local report
     """
 
     if prun_indexes is None:

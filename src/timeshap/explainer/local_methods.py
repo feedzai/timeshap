@@ -12,12 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Tuple
 import numpy as np
 import pandas as pd
 from timeshap.plot import plot_local_report
 from timeshap.explainer import local_pruning, local_event, local_feat, local_cell_level
-from timeshap.utils import convert_to_indexes, validate_input
+from timeshap.utils import validate_input
 
 
 def validate_local_input(f: Callable[[np.ndarray], np.ndarray],
@@ -132,7 +132,7 @@ def calc_local_report(f: Callable[[np.ndarray], np.ndarray],
                       entity_uuid=None,
                       time_col=None,
                       verbose=False,
-                      ):
+                      ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Calculates local explanations
 
     Parameters
@@ -277,12 +277,13 @@ def local_report(f: Callable[[np.ndarray], np.ndarray],
 
     verbose: bool
         If process is verbose
-
-    Returns
-    -------
-    altair.plot
     """
-    pruning_data, event_data, feature_data, cell_level = calc_local_report(f, data, pruning_dict,
-                event_dict, feature_dict, cell_dict, baseline, model_features, entity_col, entity_uuid, time_col, verbose)
-    plot = plot_local_report(pruning_dict, event_dict, feature_dict, cell_dict, pruning_data, event_data, feature_data, cell_level)
+    pruning_data, event_data, feature_data, cell_level = \
+        calc_local_report(f, data, pruning_dict, event_dict, feature_dict,
+                          cell_dict, baseline, model_features, entity_col,
+                          entity_uuid, time_col, verbose
+                          )
+    plot = plot_local_report(pruning_dict, event_dict, feature_dict, cell_dict,
+                             pruning_data, event_data, feature_data, cell_level
+                             )
     return plot

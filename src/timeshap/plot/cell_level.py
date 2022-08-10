@@ -45,10 +45,6 @@ def plot_cell_level(cell_data: pd.DataFrame,
             'width': width of the plot, default 200
             'axis_lims': plot Y domain, default [-0.5, 0.5]
             'FontSize': plot font size, default 15
-
-    Returns
-    -------
-    altair.plot
     """
     c_range = ["#5f8fd6",
                "#99c3fb",

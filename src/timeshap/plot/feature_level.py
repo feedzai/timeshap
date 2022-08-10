@@ -35,10 +35,6 @@ def plot_feat_barplot(feat_data: pd.DataFrame,
 
     plot_features: dict
         Dict containing mapping between model features and display features
-
-    Returns
-    -------
-    altair.plot
     """
     feat_data = copy.deepcopy(feat_data)
     if plot_features:
@@ -100,10 +96,6 @@ def plot_global_feat(feat_data: pd.DataFrame,
             'width': width of the plot, default 288
             'axis_lims': plot Y domain, default [-0.2, 0.6]
             'FontSize': plot font size, default 13
-
-    Returns
-    -------
-    altair.plot
     """
     def plot(feat_data, top_x_feats, threshold, plot_features, plot_parameters):
         avg_df = feat_data.groupby('Feature').mean()['Shapley Value']
