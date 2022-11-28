@@ -45,7 +45,7 @@ def plot_temp_coalition_pruning(df: pd.DataFrame,
         negative_values = copy.deepcopy(df[df['Shapley Value'] < 0])
         for idx, row in negative_values.iterrows():
             corresponding_row = df[np.logical_and(df['t (event index)'] == row['t (event index)'], ~(df['Coalition'] == row['Coalition']))]
-            df.at[corresponding_row.index, 'Shapley Value'] = corresponding_row['Shapley Value'].values[0] + row['Shapley Value']
+            df.at[corresponding_row.index[0], 'Shapley Value'] = corresponding_row['Shapley Value'].values[0] + row['Shapley Value']
             df.at[idx, 'Shapley Value'] = 0
         return df
 
