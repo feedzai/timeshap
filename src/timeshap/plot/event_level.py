@@ -94,7 +94,7 @@ def plot_global_event(event_data: pd.DataFrame,
             'axis_lims': plot Y domain, default [-0.3, 0.9]
             't_limit': number of events to plot, default -20
     """
-    def plot(event_data: pd.DataFrame, plot_parameters: dict):
+    def plot(event_data: pd.DataFrame, plot_parameters: dict = None):
         event_data = copy.deepcopy(event_data)
         event_data = event_data[event_data['t (event index)'] < 1]
         event_data = event_data[['Shapley Value', 't (event index)']]
@@ -140,4 +140,4 @@ def plot_global_event(event_data: pd.DataFrame,
 
         return global_event
 
-    return multi_plot_wrapper(event_data, plot, (plot_parameters))
+    return multi_plot_wrapper(event_data, plot, ((plot_parameters),))

@@ -127,7 +127,12 @@ def get_tolerances_to_test(pruning_data: pd.DataFrame,
             tolerances_to_calc = explanation_dict.get('tol')
             print(f"No pruning data provided. TimeSHAP will calculate pruning on-the fly using provided tolerances: {list(tolerances_to_calc)} ")
     else:
-        tolerances_to_calc = np.unique(pruning_data['Tolerance'].values)
+        tolerance_values = pruning_data['Tolerance'].values
+        if 'No Pruning' in tolerance_values:
+            index = np.where(tolerance_values == 'No Pruning')
+            tolerance_values = np.delete(tolerance_values, index)
+            tolerance_values = np.append(tolerance_values, -1)
+        tolerances_to_calc = np.unique(tolerance_values)
         tolerances_to_calc = tolerances_to_calc[~(tolerances_to_calc == -1)]
         input_tols = list(np.unique(explanation_dict.get('tol', tolerances_to_calc)))
         if input_tols is not None:

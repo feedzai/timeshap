@@ -46,7 +46,7 @@ def multi_plot_wrapper(explanation_data: pd.DataFrame,
         for rs in data_rs:
             for nsamples in data_nsamples:
                 filtered_data = filter_dataset(explanation_data, tolerance, rs, nsamples)
-                param_plot = method(filtered_data, {}) if parameters is None else method(filtered_data, *parameters)
+                param_plot = method(filtered_data) if parameters is None else method(filtered_data, *parameters)
 
                 if multi_plot:
                     param_plot.properties(
