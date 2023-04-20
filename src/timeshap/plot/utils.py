@@ -49,7 +49,7 @@ def multi_plot_wrapper(explanation_data: pd.DataFrame,
                 param_plot = method(filtered_data) if parameters is None else method(filtered_data, *parameters)
 
                 if multi_plot:
-                    param_plot.properties(
+                    param_plot = param_plot.properties(
                         title=f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
                     )
                 final_plot &= param_plot

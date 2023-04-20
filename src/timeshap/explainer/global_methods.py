@@ -91,14 +91,17 @@ def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
         if len(data.shape) == 2:
             assert entity_col is not None, "Entity column must be provided when using 2D numpy arrays as data"
 
-    verify_pruning_dict(pruning_dict)
+    if pruning_dict is not None:
+        verify_pruning_dict(pruning_dict)
+
+        if pruning_dict.get("path"):
+            if os.path.exists(pruning_dict.get("path")) and not append_to_files:
+                print(
+                    "The defined path for pruning data already exists and the append option is turned off. TimeSHAP will only read from this file and will not create new explanation data")
+        else:
+            print("No path to persist pruning data provided.")
     verify_event_dict(event_dict)
     verify_feature_dict(feature_dict)
-    if pruning_dict.get("path"):
-        if os.path.exists(pruning_dict.get("path")) and not append_to_files:
-            print("The defined path for pruning data already exists and the append option is turned off. TimeSHAP will only read from this file and will not create new explanation data")
-    else:
-        print("No path to persist pruning data provided.")
 
     if event_dict.get("path"):
         if os.path.exists(event_dict.get("path")) and not append_to_files:
@@ -199,8 +202,14 @@ def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
     if len(data) > max_instances:
         selected_sequences = np.random.choice(np.arange(len(data)), max_instances, False)
         data = [data[idx] for idx in selected_sequences]
-    print("Calculating pruning algorithm")
-    prun_indexes = prune_all(f, data, pruning_dict, baseline, model_features_index, schema, entity_col_index, time_col_index, append_to_files, verbose)
+
+    if pruning_dict is None:
+        prun_indexes = None
+    else:
+        print("Calculating pruning algorithm")
+        prun_indexes = prune_all(f, data, pruning_dict, baseline,
+                                 model_features_index, schema, entity_col_index,
+                                 time_col_index, append_to_files, verbose)
 
     print("Calculating event data")
     event_data = event_explain_all(f, data, event_dict, prun_indexes, baseline, model_features_index, schema, entity_col_index, time_col_index, append_to_files, verbose)

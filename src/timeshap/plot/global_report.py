@@ -47,23 +47,27 @@ def plot_global_report(pruning_dict: dict,
     feat_data: pd.DataFrame
         Global feature explanations to plot
     """
-
-    if prun_indexes is None:
-        assert pruning_dict.get('path', False), "No data or path to data provided to calculate pruning statistics"
+    if pruning_dict is None:
+        if pruning_dict is not None:
+            assert pruning_dict.get('path', False), "No data or path to data provided to calculate pruning statistics"
     if event_data is None:
         assert event_dict.get('path', False), "No data or path to data provided to plot event explanations"
     if feat_data is None:
         assert feature_dict.get('path', False), "No data or path to data provided to plot feature explanations"
 
     if prun_indexes is None:
-        prun_indexes = pd.read_csv(pruning_dict.get('path'))
+        if pruning_dict is not None and pruning_dict.get('path'):
+            prun_indexes = pd.read_csv(pruning_dict.get('path'))
     if event_data is None:
         event_data = pd.read_csv(event_dict.get('path'))
     if feat_data is None:
         feat_data = pd.read_csv(feature_dict.get('path'))
 
-    print("Calculating pruning indexes")
-    pruning_stats = pruning_statistics(prun_indexes, pruning_dict.get('tol'))
+    if pruning_dict is None:
+        pruning_stats = None
+    else:
+        print("Calculating pruning indexes")
+        pruning_stats = pruning_statistics(prun_indexes, pruning_dict.get('tol'))
 
     plot_tols, plot_rs, plot_nsamples = find_parameters_to_plot(event_dict, feature_dict, event_data, feat_data)
 
@@ -80,7 +84,7 @@ def plot_global_report(pruning_dict: dict,
 
                 horizontal_plot = alt.hconcat(event_global_plot, feat_global_plot, center=True)
 
-                horizontal_plot.properties(
+                horizontal_plot = horizontal_plot.properties(
                     title=f"Parameters: NSamples={nsamples} | Random Seed={rs} | Pruning Tol= {tolerance}"
                 )
                 final_plot &= horizontal_plot

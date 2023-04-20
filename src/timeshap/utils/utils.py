@@ -120,7 +120,7 @@ def get_tolerances_to_test(pruning_data: pd.DataFrame,
         List of sequences
     """
     if pruning_data is None:
-        if explanation_dict.get('tol', False):
+        if explanation_dict.get('tol', True):
             print("No pruning data provided and no pruning tolerances provided. No pruning will take place")
             tolerances_to_calc = [-1.0]
         else:

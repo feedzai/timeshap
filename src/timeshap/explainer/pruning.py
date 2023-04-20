@@ -367,11 +367,11 @@ def prune_all(f: Callable,
     tolerances = list(np.unique(pruning_dict.get('tol')))
     make_predictions = True
     prun_data = None
-    if file_path is not None and os.path.exists(file_path) and not append_to_files:
+    if file_path is not None and os.path.exists(file_path):
         prun_data = pd.read_csv(file_path)
         make_predictions = False
 
-        # TODO resume explanations
+        # TODO resume explanations for missing entities
         # necessary_entities = set(np.unique(data[entity_col].values))
         # loaded_csv = pd.read_csv(file_path)
         # present_entities = set(np.unique(loaded_csv[entity_col].values))
@@ -402,7 +402,7 @@ def prune_all(f: Callable,
             if entity_col is not None:
                 entity = sequence[0, 0, entity_col_index]
             if model_features:
-                sequence = sequence[:, :, model_features]
+                sequence = sequence[:, :, model_features_index]
             sequence = sequence.astype(np.float64)
             local_pruning_data = temp_coalition_pruning(f, sequence, baseline, None, ret_plot_data=True, verbose=verbose)
 

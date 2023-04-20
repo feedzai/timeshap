@@ -53,8 +53,9 @@ def plot_local_report(pruning_dict: dict,
     cell_data: pd.DataFrame
         Cell explanations to plot
     """
-    if coal_plot_data is None:
-        assert pruning_dict.get('path', False), "No data or path to data provided to calculate pruning statistics"
+    if pruning_dict is None:
+        if pruning_dict is not None:
+            assert pruning_dict.get('path', False), "No data or path to data provided to calculate pruning statistics"
     if event_data is None:
         assert event_dict.get('path', False), "No data or path to data provided to plot event explanations"
     if feat_data is None:
@@ -63,7 +64,8 @@ def plot_local_report(pruning_dict: dict,
         assert cell_dict.get('path', False), "No data or path to data provided to plot feature explanations"
 
     if coal_plot_data is None:
-        coal_plot_data = pd.read_csv(pruning_dict.get('path'))
+        if pruning_dict is not None and pruning_dict.get('path'):
+            coal_plot_data = pd.read_csv(pruning_dict.get('path'))
     if event_data is None:
         event_data = pd.read_csv(event_dict.get('path'))
     if feat_data is None:
@@ -71,9 +73,10 @@ def plot_local_report(pruning_dict: dict,
     if cell_data is None and cell_dict is not None:
         cell_data = pd.read_csv(cell_dict.get('path'))
 
-    coal_prun_idx = prune_given_data(coal_plot_data, pruning_dict.get('tol'))
-    plot_lim = max(abs(coal_prun_idx)+10, 40)
-    pruning_plot = plot_temp_coalition_pruning(coal_plot_data, coal_prun_idx, plot_lim)
+    if coal_plot_data is not None:
+        coal_prun_idx = prune_given_data(coal_plot_data, pruning_dict.get('tol'))
+        plot_lim = max(abs(coal_prun_idx)+10, 40)
+        pruning_plot = plot_temp_coalition_pruning(coal_plot_data, coal_prun_idx, plot_lim)
 
     event_plot = plot_event_heatmap(event_data)
 
@@ -82,8 +85,15 @@ def plot_local_report(pruning_dict: dict,
     if cell_dict:
         feat_names = list(feat_data['Feature'].values)[:-1]  # exclude pruned events
         cell_plot = plot_cell_level(cell_data, feat_names, feature_dict.get('plot_features'))
-        plot_report = (pruning_plot | event_plot | feature_plot | cell_plot).resolve_scale(color='independent')
+        if coal_plot_data is not None:
+            plot_report = (pruning_plot | event_plot | feature_plot | cell_plot).resolve_scale(color='independent')
+        else:
+            plot_report = (event_plot | feature_plot | cell_plot).resolve_scale(color='independent')
+
     else:
-        plot_report = (pruning_plot | event_plot | feature_plot).resolve_scale(color='independent')
+        if coal_plot_data is not None:
+            plot_report = (pruning_plot | event_plot | feature_plot).resolve_scale( color='independent')
+        else:
+            plot_report = (event_plot | feature_plot).resolve_scale( color='independent')
 
     return plot_report

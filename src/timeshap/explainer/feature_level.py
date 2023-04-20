@@ -274,27 +274,37 @@ def feat_explain_all(f: Callable,
 
     tolerances_to_calc = get_tolerances_to_test(pruning_data, feat_dict)
 
-    if file_path is not None and os.path.exists(file_path) and not append_to_files:
+    if file_path is not None and os.path.exists(file_path):
         feat_data = pd.read_csv(file_path)
         make_predictions = False
 
-        # TODO resume explanations
-        # conditions = []
-        # necessary_entities = set(np.unique(data[entity_col].values))
-        # feat_data = pd.read_csv(file_path)
-        # present_entities = set(np.unique(feat_data[entity_col].values))
-        # if necessary_entities.issubset(present_entities):
-        #     conditions.append(True)
-        #     feat_data = feat_data[feat_data[entity_col].isin(necessary_entities)]
-        #
-        # necessary_tols = set(tolerances_to_calc)
-        # loaded_csv = pd.read_csv(file_path)
-        # present_tols = set(np.unique(loaded_csv['Tolerance'].values))
-        # if necessary_tols.issubset(present_tols):
-        #     conditions.append(True)
-        #     feat_data = feat_data[loaded_csv['Tolerance'].isin(necessary_tols)]
-        #
-        # make_predictions = ~np.array(conditions).all()
+        present_tols = set(np.unique(feat_data['Tolerance'].values))
+        required_tols = [x for x in tolerances_to_calc if x not in present_tols]
+        if len(required_tols) == 0:
+            pass
+        elif len(required_tols) == 1 and -1 in tolerances_to_calc:
+            # Assuming all sequences are already explained
+            make_predictions = True
+        else:
+            raise NotImplementedError
+
+            # TODO resume explanations
+            # conditions = []
+            # necessary_entities = set(np.unique(data[entity_col].values))
+            # feat_data = pd.read_csv(file_path)
+            # present_entities = set(np.unique(feat_data[entity_col].values))
+            # if necessary_entities.issubset(present_entities):
+            #     conditions.append(True)
+            #     feat_data = feat_data[feat_data[entity_col].isin(necessary_entities)]
+            #
+            # necessary_tols = set(tolerances_to_calc)
+            # loaded_csv = pd.read_csv(file_path)
+            # present_tols = set(np.unique(loaded_csv['Tolerance'].values))
+            # if necessary_tols.issubset(present_tols):
+            #     conditions.append(True)
+            #     feat_data = feat_data[loaded_csv['Tolerance'].isin(necessary_tols)]
+            #
+            # make_predictions = ~np.array(conditions).all()
 
     if make_predictions:
         random_seeds = list(np.unique(feat_dict.get('rs')))
@@ -324,12 +334,14 @@ def feat_explain_all(f: Callable,
                     if entity_col is not None:
                         entity = sequence[0, 0, entity_col_index]
                     if model_features:
-                        sequence = sequence[:, :, model_features]
+                        sequence = sequence[:, :, model_features_index]
                     sequence = sequence.astype(np.float64)
                     feat_data = None
                     prev_pruning_idx = None
                     for tol in tolerances_to_calc:
-                        if pruning_data is None:
+                        if tol == -1:
+                            pruning_idx = 0
+                        elif pruning_data is None:
                             #we need to perform the pruning on the fly
                             coal_prun_idx, _ = temp_coalition_pruning(f, sequence, baseline, tol)
                             pruning_idx = data.shape[1] + coal_prun_idx

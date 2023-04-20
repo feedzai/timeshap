@@ -89,10 +89,11 @@ def validate_local_input(f: Callable[[np.ndarray], np.ndarray],
 
     assert baseline is None or isinstance(baseline, (pd.DataFrame, np.ndarray)), "Baseline must be a pd.DataFrame or np.ndarrays"
 
-    assert pruning_dict.get("tol") is not None, "Prunning dict must have tolerance attribute"
-    assert isinstance(pruning_dict.get("tol"), (int, float)), "Provided tolerance must be a int or float"
-    if isinstance(pruning_dict.get("tol"), int):
-        assert pruning_dict.get("tol") == 0, "Provided tolerance must be a float or 0"
+    assert pruning_dict is None or pruning_dict.get("tol") is not None, "Prunning dict must have tolerance attribute"
+    if pruning_dict is not None:
+        assert isinstance(pruning_dict.get("tol"), (int, float)), "Provided tolerance must be a int or float"
+        if isinstance(pruning_dict.get("tol"), int):
+            assert pruning_dict.get("tol") == 0, "Provided tolerance must be a float or 0"
 
     check_dict(event_dict, 'rs', int, "Provided random seed must be a int")
     check_dict(event_dict, 'nsamples', int, "Provided nsamples must be a int")
@@ -205,8 +206,13 @@ def calc_local_report(f: Callable[[np.ndarray], np.ndarray],
             data = data.values
         data = np.expand_dims(data.to_numpy().copy(), axis=0).astype(float)
 
-    coal_plot_data, coal_prun_idx = local_pruning(f, data, pruning_dict, baseline, entity_uuid, entity_col, verbose)
-    pruning_idx = data.shape[1] + coal_prun_idx
+    if pruning_dict is None:
+        print("No pruning dict passed. Skipping pruning procedures")
+        pruning_idx = 0
+        coal_plot_data = None
+    else:
+        coal_plot_data, coal_prun_idx = local_pruning(f, data, pruning_dict, baseline, entity_uuid, entity_col, verbose)
+        pruning_idx = data.shape[1] + coal_prun_idx
 
     event_data = local_event(f, data, event_dict, entity_uuid, entity_col, baseline, pruning_idx)
 
@@ -234,6 +240,8 @@ def local_report(f: Callable[[np.ndarray], np.ndarray],
                  verbose=False,
                  ):
     """Calculates local report and plots it.
+
+     `None` on the pruning_dict argument makes TimeSHAP skip the pruning step.
 
     Parameters
     ----------
