@@ -120,12 +120,12 @@ def get_tolerances_to_test(pruning_data: pd.DataFrame,
         List of sequences
     """
     if pruning_data is None:
-        if explanation_dict.get('tol', True):
-            print("No pruning data provided and no pruning tolerances provided. No pruning will take place")
-            tolerances_to_calc = [-1.0]
-        else:
+        if explanation_dict.get('tol', False):
             tolerances_to_calc = explanation_dict.get('tol')
             print(f"No pruning data provided. TimeSHAP will calculate pruning on-the fly using provided tolerances: {list(tolerances_to_calc)} ")
+        else:
+            print("No pruning data provided and no pruning tolerances provided. No pruning will take place")
+            tolerances_to_calc = [-1.0]
     else:
         tolerance_values = pruning_data['Tolerance'].values
         if 'No Pruning' in tolerance_values:

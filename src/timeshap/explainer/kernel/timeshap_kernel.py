@@ -85,7 +85,7 @@ class TimeShapKernel(Kernel):
         In TimeSHAP you can use an average event or average sequence.
         When using average events, consider using `timeshap.calc_avg_event` method to obtain it.
         When using average sequence, considering using `timeshap.calc_avg_sequence` method to obtain it.
-        Note that when using the average sequence, all sequences of the dataset need to be the same.
+        Note that when using the average sequence, all sequences of the dataset need to be the same length.
 
     rs: int
         Random seed for timeshap algorithm
@@ -368,11 +368,11 @@ class TimeShapKernel(Kernel):
         if not self.vector_out:
             self.fx = np.array([self.fx])
 
-        explained_score = (self.fx - self.fnull)[0]
-        if abs(explained_score) < 0.1:
-            raise ValueError(f"Score difference between baseline and instance ({explained_score}) is too low < 0.1."
-                             f"Baseline score: {self.fx[0]} | Instance score: {self.fnull[0]}."
-                             f"Consider choosing another baseline.")
+        #explained_score = (self.fx - self.fnull)[0]
+        # if abs(explained_score) < 0.1:
+        #     raise ValueError(f"Score difference between baseline and instance ({explained_score}) is too low < 0.1."
+        #                      f"Baseline score: {self.fnull[0]} | Instance score: {self.fx[0]}."
+        #                      f"Consider choosing another baseline.")
 
         # if no features vary then no feature has an effect
         if self.M == 0:
