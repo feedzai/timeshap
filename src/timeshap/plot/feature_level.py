@@ -107,20 +107,27 @@ def plot_global_feat(feat_data: pd.DataFrame,
         feat_data = feat_data[feat_data['Feature'].isin(avg_df.index)][['Shapley Value', 'Feature']]
 
         if threshold:
-            avg_df = avg_df.append(pd.Series([0], index=['(...)']))
+            avg_df = pd.concat([avg_df, pd.Series([0], index=['(...)'])], axis=0)
             #some prunning happened
-            feat_data = feat_data.append({'Feature': '(...)', 'Shapley Value': -0.6, }, ignore_index=True)
+            feat_data = pd.concat([feat_data,
+                                  pd.DataFrame({'Feature': '(...)', 'Shapley Value': -0.6, }, index=[0])], 
+                                  ignore_index=True,
+                                  axis=0)
+            
         feat_data['type'] = 'Shapley Value'
 
         for index, value in avg_df.items():
             if index == '(...)':
-                feat_data = feat_data.append(
-                    {'Feature': index, 'Shapley Value': None, 'type': 'Mean'},
-                    ignore_index=True)
+                feat_data = pd.concat([feat_data, 
+                                      pd.DataFrame({'Feature': index, 'Shapley Value': None, 'type': 'Mean'}, index=[0])],
+                                      ignore_index=True,
+                                      axis=0)
             else:
-                feat_data = feat_data.append(
-                    {'Feature': index, 'Shapley Value': value, 'type': 'Mean'},
-                    ignore_index=True)
+                feat_data = pd.concat([feat_data,
+                                        pd.DataFrame({'Feature': index, 'Shapley Value': value, 'type': 'Mean'}, index=[0])],
+                                        ignore_index=True,
+                                        axis=0)
+   
 
         sort_features = list(avg_df.sort_values(ascending=False).index)
         if plot_features:

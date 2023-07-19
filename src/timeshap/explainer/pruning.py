@@ -397,6 +397,9 @@ def prune_all(f: Callable,
 
         model_features_index, entity_col_index, time_col_index = convert_to_indexes(model_features, schema, entity_col, time_col)
         data = convert_data_to_3d(data, entity_col_index, time_col_index)
+       
+        #Find a way to handle the case when entity_col is None
+   
 
         for sequence in data:
             if entity_col is not None:
@@ -408,6 +411,7 @@ def prune_all(f: Callable,
 
             if entity_col is not None:
                 local_pruning_data["Entity"] = entity
+        
 
             ret_prun_data.append(local_pruning_data.values)
             if file_path is not None:
@@ -415,7 +419,9 @@ def prune_all(f: Callable,
                      writer = csv.writer(file, delimiter=',')
                      writer.writerows(local_pruning_data.values)
 
+        
         prun_data = pd.DataFrame(np.concatenate(ret_prun_data), columns=names)
+    
 
     df = calc_prun_indexes(prun_data, tolerances)
     return df
