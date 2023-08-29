@@ -191,7 +191,8 @@ def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
         Global feature explanations
     """
     if schema is None and isinstance(data, pd.DataFrame):
-        schema = list(data.columns)
+        #schema = list(data.columns)
+        schema = list(data.columns.map(str))
 
     validate_global_input(
         f, data, pruning_dict, event_dict, feature_dict, baseline, model_features,

@@ -99,12 +99,12 @@ def plot_global_event(event_data: pd.DataFrame,
         event_data = event_data[event_data['t (event index)'] < 1]
         event_data = event_data[['Shapley Value', 't (event index)']]
 
+        # Related to issue #43; credit to @edpclau
+        event_data = copy.deepcopy(event_data)
+        avg_df = event_data.groupby('t (event index)').mean().reset_index()
         event_data['type'] = 'Shapley Value'
-
-        avg_df = event_data.groupby('t (event index)').mean()['Shapley Value']
-
-        for index, value in avg_df.items():
-            event_data = event_data.append({'t (event index)': index, 'Shapley Value': value, 'type': 'Mean'}, ignore_index=True)
+        avg_df['type'] = 'Mean'
+        event_data = pd.concat([event_data, avg_df], axis=0, ignore_index=True)
 
         if plot_parameters is None:
             plot_parameters = {}
