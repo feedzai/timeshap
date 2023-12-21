@@ -1,4 +1,11 @@
 # TimeSHAP
+
+![PyPI version](https://badgen.net/pypi/v/timeshap)
+![OSI license](https://badgen.net/pypi/license/timeshap)
+[![Downloads](https://static.pepy.tech/badge/timeshap)](https://pepy.tech/project/timeshap)
+<!-- ![Python compatibility](https://badgen.net/pypi/python/timeshap) -->
+
+
 TimeSHAP is a model-agnostic, recurrent explainer that builds upon KernelSHAP and 
 extends it to the sequential domain.
 TimeSHAP computes event/timestamp- feature-, and cell-level attributions. 
