@@ -1,7 +1,6 @@
 # TimeSHAP
 
 ![PyPI version](https://badgen.net/pypi/v/timeshap)
-![OSI license](https://badgen.net/pypi/license/timeshap)
 [![Downloads](https://static.pepy.tech/badge/timeshap)](https://pepy.tech/project/timeshap)
 <!-- ![Python compatibility](https://badgen.net/pypi/python/timeshap) -->
 
