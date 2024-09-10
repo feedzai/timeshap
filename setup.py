@@ -46,26 +46,25 @@ setup(
     version=__version__,
     description="KernelSHAP adaptation for recurrent models.",
     keywords=['explainability', 'TimeShap'],
-    
     long_description=(README_PATH).read_text(),
     long_description_content_type="text/markdown",
-    
     author="Feedzai",
     url="https://github.com/feedzai/timeshap",
-
     package_dir={'': 'src'},
     packages=find_packages('src', exclude=['tests', 'tests.*']),
     package_data={
         '': ['*.yaml, *.yml'],
     },
     include_package_data=True,
-
     python_requires='>=3.6',
-
     install_requires=requirements,
-
     zip_safe=False,
-
     test_suite='tests',
     tests_require=requirements_test,
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Programming Language :: Python :: 3",
+    ],
 )

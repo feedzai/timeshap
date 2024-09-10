@@ -23,12 +23,7 @@ and to the video presentation [here](https://www.youtube.com/watch?v=Q7Q9o7ywXx8
 
 ## Install TimeSHAP
 
-##### Via Pip
-```
-pip install timeshap
-```
-
-##### Via Github
+#### [Recommended] Via Github
 Clone the repository into a local directory using:
 ```
 git clone https://github.com/feedzai/timeshap.git
@@ -41,8 +36,12 @@ cd timeshap
 pip install .
 ```
 
+#### Via Pip
+```
+pip install timeshap
+```
 
-##### Test your installation
+#### Test your installation
 Start a Python session in your terminal using
 
 ```
