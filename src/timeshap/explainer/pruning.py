@@ -286,13 +286,20 @@ def local_pruning(f: Callable[[np.ndarray], np.ndarray],
     return coal_plot_data, coal_prun_idx
 
 
-def verify_pruning_dict(pruning_dict: dict):
+def verify_pruning_dict(pruning_dict: dict) -> dict:
     """Verifies the format of the pruning dict
 
     Parameters
     ----------
     pruning_dict: dict
+
+    Returns
+    -------
+    dict
+        A copy of `pruning_dict` with the tolerances as a list.
+        The given dict is not changed.
     """
+    pruning_dict = dict(pruning_dict)
     if pruning_dict.get('path'):
         assert isinstance(pruning_dict.get('path'), str)
 
@@ -304,6 +311,7 @@ def verify_pruning_dict(pruning_dict: dict):
         assert np.array([isinstance(x, float) for x in tolerances]).all(), "All provided tolerances must be floats."
     else:
         raise ValueError("Unsuported format of pruning tolerance(s). Please provide one tolerance or a list of them.")
+    return pruning_dict
 
 
 def prune_all(f: Callable,
@@ -344,7 +352,9 @@ def prune_all(f: Callable,
         Schema of provided data
 
     entity_col: str
-        Column that contains the sequence identifiers
+        Entity column to identify sequences.
+        Without it, a sequence is identified by its position in `data`, and
+        files that `append_to_files` extends across runs can mix those positions.
 
     time_col: str
         Data column that represents the time feature in order to sort sequences
@@ -362,7 +372,7 @@ def prune_all(f: Callable,
     """
     if schema is None and isinstance(data, pd.DataFrame):
         schema = list(data.columns)
-    verify_pruning_dict(pruning_dict)
+    pruning_dict = verify_pruning_dict(pruning_dict)
     file_path = pruning_dict.get('path')
     tolerances = list(np.unique(pruning_dict.get('tol')))
     make_predictions = True
@@ -388,7 +398,7 @@ def prune_all(f: Callable,
             else:
                 if '/' in file_path:
                     Path(file_path.rsplit("/", 1)[0]).mkdir(parents=True, exist_ok=True)
-                with open(file_path, 'w', newline='') as file:
+                with open(file_path, 'w', newline='', encoding='utf-8') as file:
                     writer = csv.writer(file, delimiter=',')
                     writer.writerow(names)
 
@@ -398,20 +408,19 @@ def prune_all(f: Callable,
         model_features_index, entity_col_index, time_col_index = convert_to_indexes(model_features, schema, entity_col, time_col)
         data = convert_data_to_3d(data, entity_col_index, time_col_index)
 
-        for sequence in data:
-            if entity_col is not None:
-                entity = sequence[0, 0, entity_col_index]
+        for sequence_idx, sequence in enumerate(data):
+            # without an entity column, a sequence is identified by its position in `data`
+            entity = sequence[0, 0, entity_col_index] if entity_col is not None else sequence_idx
             if model_features:
                 sequence = sequence[:, :, model_features_index]
             sequence = sequence.astype(np.float64)
             local_pruning_data = temp_coalition_pruning(f, sequence, baseline, None, ret_plot_data=True, verbose=verbose)
 
-            if entity_col is not None:
-                local_pruning_data["Entity"] = entity
+            local_pruning_data["Entity"] = entity
 
             ret_prun_data.append(local_pruning_data.values)
             if file_path is not None:
-                 with open(file_path, 'a', newline='') as file:
+                 with open(file_path, 'a', newline='', encoding='utf-8') as file:
                      writer = csv.writer(file, delimiter=',')
                      writer.writerows(local_pruning_data.values)
 

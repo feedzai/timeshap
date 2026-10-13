@@ -12,7 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 import pandas as pd
-from timeshap.explainer import pruning_statistics
 from timeshap.plot import plot_global_feat, plot_global_event
 import altair as alt
 from timeshap.plot import find_parameters_to_plot, filter_dataset
@@ -67,6 +66,8 @@ def plot_global_report(pruning_dict: dict,
         pruning_stats = None
     else:
         print("Calculating pruning indexes")
+        # imported here because timeshap.explainer imports timeshap.plot (#49)
+        from timeshap.explainer import pruning_statistics
         pruning_stats = pruning_statistics(prun_indexes, pruning_dict.get('tol'))
 
     plot_tols, plot_rs, plot_nsamples = find_parameters_to_plot(event_dict, feature_dict, event_data, feat_data)
