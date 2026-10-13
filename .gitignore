@@ -13,3 +13,5 @@ playground
 **/outputs
 TODO
 dist
+.venv/
+.pytest_cache/

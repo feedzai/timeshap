@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "timeshap"
+dynamic = ["version"]
+description = "KernelSHAP adaptation for recurrent models."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Feedzai" }]
+requires-python = ">=3.10"
+keywords = ["explainability", "TimeSHAP", "SHAP", "Shapley values", "XAI", "RNN", "sequences", "time series"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+# The upper bounds are the newest major versions the test suite runs against.
+# shap has a tighter one: TimeSHAP imports its private modules and relies on
+# l1_reg="auto", which shap has deprecated.
+dependencies = [
+    "numpy>=1.22,<3",
+    "pandas>=1.4,<4",
+    "scipy>=1.8,<2",
+    "shap>=0.42.1,<0.54",
+    "altair>=4.2,<7",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=1.13"]
+test = ["pytest>=7", "torch>=1.13"]
+notebooks = ["jupyter", "nbclient>=0.10", "ipykernel", "tqdm", "torch>=1.13"]
+
+[project.urls]
+Homepage = "https://github.com/feedzai/timeshap"
+Paper = "https://doi.org/10.1145/3447548.3467166"
+Issues = "https://github.com/feedzai/timeshap/issues"
+Changelog = "https://github.com/feedzai/timeshap/blob/main/CHANGELOG.md"
+
+[tool.setuptools.dynamic]
+version = { attr = "timeshap.version.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    # TimeSHAP keeps shap's default l1_reg="auto" until 2.0, so results do not change in a patch release
+    "ignore:l1_reg='auto' is deprecated:DeprecationWarning",
+]
