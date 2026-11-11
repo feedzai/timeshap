@@ -240,61 +240,63 @@ def get_calc_global_answers():
         columns=['Entity','Tolerance','Pruning idx']
     )
 
+    # Event and cell values go through shap's lasso feature selection (l1_reg="auto").
+    # Regenerated for 1.0.5: identical on shap 0.42.1 to 0.53.
     event_data = pd.DataFrame(
-        [[42, 50, 'Event -1', 0.0260, 0, 'sequence_id', 0.0250],
+        [[42, 50, 'Event -1', 0.0360, 0, 'sequence_id', 0.0250],
          [42, 50, 'Event -2', 0.0000, -1, 'sequence_id', 0.0250],
-         [42, 50, 'Event -3', 0.1538, -2, 'sequence_id', 0.0250],
+         [42, 50, 'Event -3', 0.0861, -2, 'sequence_id', 0.0250],
          [42, 50, 'Event -4', 0.0000, -3, 'sequence_id', 0.0250],
          [42, 50, 'Event -5', 0.0000, -4, 'sequence_id', 0.0250],
          [42, 50, 'Event -6', 0.0000, -5, 'sequence_id', 0.0250],
          [42, 50, 'Event -7', 0.0000, -6, 'sequence_id', 0.0250],
          [42, 50, 'Event -8', 0.0000, -7, 'sequence_id', 0.0250],
-         [42, 50, 'Event -9', 0.0686, -8, 'sequence_id', 0.0250],
+         [42, 50, 'Event -9', 0.0835, -8, 'sequence_id', 0.0250],
          [42, 50, 'Event -10', 0.0000, -9, 'sequence_id', 0.0250],
-         [42, 50, 'Event -11', 0.1205, -10, 'sequence_id', 0.0250],
+         [42, 50, 'Event -11', 0.0913, -10, 'sequence_id', 0.0250],
          [42, 50, 'Event -12', 0.0000, -11, 'sequence_id', 0.0250],
-         [42, 50, 'Event -13', 0.0000, -12, 'sequence_id', 0.0250],
-         [42, 50, 'Event -14', 0.0000, -13, 'sequence_id', 0.0250],
+         [42, 50, 'Event -13', 0.0389, -12, 'sequence_id', 0.0250],
+         [42, 50, 'Event -14', 0.0334, -13, 'sequence_id', 0.0250],
          [42, 50, 'Event -15', 0.0000, -14, 'sequence_id', 0.0250],
          [42, 50, 'Event -16', 0.0000, -15, 'sequence_id', 0.0250],
-         [42, 50, 'Event -17', 0.2153, -16, 'sequence_id', 0.0250],
+         [42, 50, 'Event -17', 0.1547, -16, 'sequence_id', 0.0250],
          [42, 50, 'Event -18', 0.0000, -17, 'sequence_id', 0.0250],
-         [42, 50, 'Event -19', 0.0000, -18, 'sequence_id', 0.0250],
+         [42, 50, 'Event -19', 0.0129, -18, 'sequence_id', 0.0250],
          [42, 50, 'Event -20', 0.0000, -19, 'sequence_id', 0.0250],
-         [42, 50, 'Event -21', 0.0562, -20, 'sequence_id', 0.0250],
+         [42, 50, 'Event -21', 0.0555, -20, 'sequence_id', 0.0250],
          [42, 50, 'Event -22', 0.0000, -21, 'sequence_id', 0.0250],
          [42, 50, 'Event -23', 0.0000, -22, 'sequence_id', 0.0250],
-         [42, 50, 'Event -24', 0.1595, -23, 'sequence_id', 0.0250],
+         [42, 50, 'Event -24', 0.1615, -23, 'sequence_id', 0.0250],
          [42, 50, 'Event -25', 0.0000, -24, 'sequence_id', 0.0250],
          [42, 50, 'Event -26', 0.0000, -25, 'sequence_id', 0.0250],
-         [42, 50, 'Pruned Events', 0.0000, 1, 'sequence_id', 0.0250],
-         [42, 50, 'Event -1', 0.0260, 0, 'other', 0.0250],
+         [42, 50, 'Pruned Events', 0.0460, 1, 'sequence_id', 0.0250],
+         [42, 50, 'Event -1', 0.0360, 0, 'other', 0.0250],
          [42, 50, 'Event -2', 0.0000, -1, 'other', 0.0250],
-         [42, 50, 'Event -3', 0.1538, -2, 'other', 0.0250],
+         [42, 50, 'Event -3', 0.0861, -2, 'other', 0.0250],
          [42, 50, 'Event -4', 0.0000, -3, 'other', 0.0250],
          [42, 50, 'Event -5', 0.0000, -4, 'other', 0.0250],
          [42, 50, 'Event -6', 0.0000, -5, 'other', 0.0250],
          [42, 50, 'Event -7', 0.0000, -6, 'other', 0.0250],
          [42, 50, 'Event -8', 0.0000, -7, 'other', 0.0250],
-         [42, 50, 'Event -9', 0.0686, -8, 'other', 0.0250],
+         [42, 50, 'Event -9', 0.0835, -8, 'other', 0.0250],
          [42, 50, 'Event -10', 0.0000, -9, 'other', 0.0250],
-         [42, 50, 'Event -11', 0.1205, -10, 'other', 0.0250],
+         [42, 50, 'Event -11', 0.0913, -10, 'other', 0.0250],
          [42, 50, 'Event -12', 0.0000, -11, 'other', 0.0250],
-         [42, 50, 'Event -13', 0.0000, -12, 'other', 0.0250],
-         [42, 50, 'Event -14', 0.0000, -13, 'other', 0.0250],
+         [42, 50, 'Event -13', 0.0389, -12, 'other', 0.0250],
+         [42, 50, 'Event -14', 0.0334, -13, 'other', 0.0250],
          [42, 50, 'Event -15', 0.0000, -14, 'other', 0.0250],
          [42, 50, 'Event -16', 0.0000, -15, 'other', 0.0250],
-         [42, 50, 'Event -17', 0.2153, -16, 'other', 0.0250],
+         [42, 50, 'Event -17', 0.1547, -16, 'other', 0.0250],
          [42, 50, 'Event -18', 0.0000, -17, 'other', 0.0250],
-         [42, 50, 'Event -19', 0.0000, -18, 'other', 0.0250],
+         [42, 50, 'Event -19', 0.0129, -18, 'other', 0.0250],
          [42, 50, 'Event -20', 0.0000, -19, 'other', 0.0250],
-         [42, 50, 'Event -21', 0.0562, -20, 'other', 0.0250],
+         [42, 50, 'Event -21', 0.0555, -20, 'other', 0.0250],
          [42, 50, 'Event -22', 0.0000, -21, 'other', 0.0250],
          [42, 50, 'Event -23', 0.0000, -22, 'other', 0.0250],
-         [42, 50, 'Event -24', 0.1595, -23, 'other', 0.0250],
+         [42, 50, 'Event -24', 0.1615, -23, 'other', 0.0250],
          [42, 50, 'Event -25', 0.0000, -24, 'other', 0.0250],
          [42, 50, 'Event -26', 0.0000, -25, 'other', 0.0250],
-         [42, 50, 'Pruned Events', 0.0000, 1, 'other', 0.0250]],
+         [42, 50, 'Pruned Events', 0.0460, 1, 'other', 0.0250], ],
         columns=['Random Seed','NSamples','Event','Shapley Value','t (event index)','Entity','Tolerance']
     )
 
@@ -394,7 +396,7 @@ class TestCalcGlobalReport(unittest.TestCase):
                 try:
                     data_tensor[i, :, :] = sorted_data.values
                 except ValueError:
-                    data_tensor = data_tensor.astype(np.object)
+                    data_tensor = data_tensor.astype(object)
                     data_tensor[i, :, :] = sorted_data.values
 
             return data_tensor
