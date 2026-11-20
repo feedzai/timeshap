@@ -142,3 +142,23 @@ class TestGetAvgScoreWithAvgSequence(unittest.TestCase):
         assert model_mock.call_count == 1
         assert result == 0.9
 
+
+
+class TestConvertToIndexes(unittest.TestCase):
+    def test_time_col_index_with_named_entity_col(self):
+        result = utils.convert_to_indexes(['a', 'b'], ['id', 'a', 'b', 't'], 'id', 3)
+        assert result == ([1, 2], 0, 3)
+
+
+class TestMode(unittest.TestCase):
+    def test_ties_resolve_to_smallest_value(self):
+        values = np.array([[3, 1], [1, 2], [3, 2], [1, 1]])
+        assert (utils.utils._mode(values, axis=0) == np.array([1, 1])).all()
+
+    def test_non_numeric_values(self):
+        values = np.array([['b', 1], ['a', 2], ['b', 2]], dtype=object)
+        assert list(utils.utils._mode(values, axis=0)) == ['b', 2]
+
+    def test_mixed_types_in_one_column(self):
+        values = np.array([['a'], [None], ['a'], [1]], dtype=object)
+        assert list(utils.utils._mode(values, axis=0)) == ['a']

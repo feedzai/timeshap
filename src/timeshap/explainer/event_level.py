@@ -149,13 +149,20 @@ def local_event(f: Callable[[np.ndarray], np.ndarray],
     return event_data
 
 
-def verify_event_dict(event_dict: dict):
+def verify_event_dict(event_dict: dict) -> dict:
     """Verifies the format of the event dict for event level explanations
 
     Parameters
     ----------
     event_dict: dict
+
+    Returns
+    -------
+    dict
+        A copy of `event_dict` with random seeds, nsamples and tolerances as lists.
+        The given dict is not changed.
     """
+    event_dict = dict(event_dict)
     if event_dict.get('path'):
         assert isinstance(event_dict.get('path'), str), "Provided path must be a string"
 
@@ -187,6 +194,7 @@ def verify_event_dict(event_dict: dict):
             event_dict['tol'] = [tolerances]
         elif isinstance(tolerances, list):
             assert np.array([isinstance(x, float) for x in tolerances]).all(), "All provided tolerances must be floats."
+    return event_dict
 
 
 def event_explain_all(f: Callable,
@@ -234,7 +242,9 @@ def event_explain_all(f: Callable,
         Schema of provided data
 
     entity_col: str
-        Entity column to identify sequences
+        Entity column to identify sequences.
+        Without it, a sequence is identified by its position in `data`, and
+        files that `append_to_files` extends across runs can mix those positions.
 
     time_col: str
         Data column that represents the time feature in order to sort sequences
@@ -252,7 +262,7 @@ def event_explain_all(f: Callable,
     """
     if schema is None and isinstance(data, pd.DataFrame):
         schema = list(data.columns)
-    verify_event_dict(event_dict)
+    event_dict = verify_event_dict(event_dict)
     file_path = event_dict.get('path')
     make_predictions = True
     event_data = None
@@ -301,7 +311,7 @@ def event_explain_all(f: Callable,
             else:
                 if '/' in file_path:
                     Path(file_path.rsplit("/", 1)[0]).mkdir(parents=True, exist_ok=True)
-                with open(file_path, 'w', newline='') as file:
+                with open(file_path, 'w', newline='', encoding='utf-8') as file:
                     writer = csv.writer(file, delimiter=',')
                     writer.writerow(names)
 
@@ -314,9 +324,9 @@ def event_explain_all(f: Callable,
         ret_event_data = []
         for rs in random_seeds:
             for ns in nsamples:
-                for sequence in data:
-                    if entity_col is not None:
-                        entity = sequence[0, 0, entity_col_index]
+                for sequence_idx, sequence in enumerate(data):
+                    # without an entity column, a sequence is identified by its position in `data`, as in `prune_all`
+                    entity = sequence[0, 0, entity_col_index] if entity_col is not None else sequence_idx
                     if model_features:
                         sequence = sequence[:, :, model_features_index]
                     sequence = sequence.astype(np.float64)
@@ -327,8 +337,8 @@ def event_explain_all(f: Callable,
                             pruning_idx = 0
                         elif pruning_data is None:
                             #we need to perform the pruning on the fly
-                            coal_prun_idx, _ = temp_coalition_pruning(f, sequence, baseline, tol)
-                            pruning_idx = data.shape[1] + coal_prun_idx
+                            coal_prun_idx = temp_coalition_pruning(f, sequence, baseline, tol)
+                            pruning_idx = sequence.shape[1] + coal_prun_idx
                         else:
                             instance = pruning_data[pruning_data["Entity"] == entity]
                             pruning_idx = instance[instance['Tolerance'] == tol]['Pruning idx'].iloc[0]
@@ -341,11 +351,11 @@ def event_explain_all(f: Callable,
                             local_event_dict = {'rs': rs, 'nsamples': ns}
                             event_data = local_event(f, sequence, local_event_dict, entity, entity_col, baseline, pruning_idx)
                             event_data['Event index'] = event_data['Feature'].apply(lambda x: 1 if x == 'Pruned Events' else -int(re.findall(r'\d+', x)[0])+1)
-                            event_data[entity_col] = entity
+                            event_data['Entity'] = entity
                             event_data['Tolerance'] = tol
 
                         if file_path is not None:
-                            with open(file_path, 'a', newline='') as file:
+                            with open(file_path, 'a', newline='', encoding='utf-8') as file:
                                 writer = csv.writer(file, delimiter=',')
                                 writer.writerows(event_data.values)
                         ret_event_data.append(event_data.values)

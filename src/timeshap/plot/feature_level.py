@@ -98,7 +98,8 @@ def plot_global_feat(feat_data: pd.DataFrame,
             'FontSize': plot font size, default 13
     """
     def plot(feat_data, top_x_feats, threshold, plot_features, plot_parameters):
-        avg_df = feat_data.groupby('Feature').mean()['Shapley Value']
+        # Related to issue #62; select the column before aggregating
+        avg_df = feat_data.groupby('Feature')['Shapley Value'].mean()
         if threshold is None and len(avg_df) >= top_x_feats:
             sorted_series = avg_df.abs().sort_values(ascending=False)
             threshold = sorted_series.iloc[top_x_feats-1]

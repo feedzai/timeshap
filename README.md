@@ -1,8 +1,9 @@
 # TimeSHAP
 
 ![PyPI version](https://badgen.net/pypi/v/timeshap)
+![Python compatibility](https://badgen.net/pypi/python/timeshap)
+[![Tests](https://github.com/feedzai/timeshap/actions/workflows/tests.yml/badge.svg)](https://github.com/feedzai/timeshap/actions/workflows/tests.yml)
 [![Downloads](https://static.pepy.tech/badge/timeshap)](https://pepy.tech/project/timeshap)
-<!-- ![Python compatibility](https://badgen.net/pypi/python/timeshap) -->
 
 
 TimeSHAP is a model-agnostic, recurrent explainer that builds upon KernelSHAP and 
@@ -23,9 +24,16 @@ and to the video presentation [here](https://www.youtube.com/watch?v=Q7Q9o7ywXx8
 
 ## Install TimeSHAP
 
+TimeSHAP supports Python 3.10 to 3.14.
+
 ##### Via Pip
 ```
 pip install timeshap
+```
+
+To also install PyTorch, for the `TorchModelWrapper` used in the tutorial:
+```
+pip install "timeshap[torch]"
 ```
 
 ##### Via Github
@@ -218,6 +226,20 @@ and returning them.
 
 
 
+#### Plots
+
+TimeSHAP plots are [Altair](https://altair-viz.github.io/) charts. The images above use the Feedzai theme.
+TimeSHAP does not change your Altair theme. To get the same look, with Altair 5.5 or later:
+
+```
+pip install feedzai-altair-theme
+```
+
+```python
+import altair as alt
+alt.theme.enable("feedzai")
+```
+
 ## Tutorial
 In order to demonstrate TimeSHAP interfaces and methods, you can consult
 [AReM.ipynb](notebooks/AReM/AReM.ipynb). 
@@ -237,6 +259,11 @@ Additionally, we also train a TensorFlow model on the same dataset
   - [`src/timeshap/plot`](src/timeshap/plot) - TimeSHAP methods to produce explanation plots
   - [`src/timeshap/utils`](src/timeshap/utils) - util methods for TimeSHAP execution
   - [`src/timeshap/wrappers`](src/timeshap/wrappers) - Wrapper classes for models in order to ease TimeSHAP explanations
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) to set up a development environment and run the tests,
+and [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## Citing TimeSHAP
 ```

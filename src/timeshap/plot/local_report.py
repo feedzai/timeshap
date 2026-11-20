@@ -13,7 +13,6 @@
 #  limitations under the License.
 import pandas as pd
 from timeshap.plot import plot_temp_coalition_pruning, plot_event_heatmap, plot_feat_barplot, plot_cell_level
-from timeshap.explainer import prune_given_data
 
 
 def plot_local_report(pruning_dict: dict,
@@ -74,6 +73,8 @@ def plot_local_report(pruning_dict: dict,
         cell_data = pd.read_csv(cell_dict.get('path'))
 
     if coal_plot_data is not None:
+        # imported here because timeshap.explainer imports timeshap.plot (#49)
+        from timeshap.explainer import prune_given_data
         coal_prun_idx = prune_given_data(coal_plot_data, pruning_dict.get('tol'))
         plot_lim = max(abs(coal_prun_idx)+10, 40)
         pruning_plot = plot_temp_coalition_pruning(coal_plot_data, coal_prun_idx, plot_lim)

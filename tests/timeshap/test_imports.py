@@ -11,6 +11,15 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+"""Each subpackage imports on its own, in a fresh interpreter."""
+import subprocess
+import sys
 
-include LICENSE
-include requirements/*
+import pytest
+
+
+@pytest.mark.parametrize("module", ["timeshap", "timeshap.explainer", "timeshap.plot",
+                                    "timeshap.utils", "timeshap.wrappers"])
+def test_import_first(module):
+    # a fresh interpreter, because the test session has already imported every subpackage (#49)
+    subprocess.run([sys.executable, "-c", f"import {module}"], check=True)

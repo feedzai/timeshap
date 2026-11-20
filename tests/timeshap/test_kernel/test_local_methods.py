@@ -198,34 +198,36 @@ def get_calc_local_answers():
         columns=['Coalition','t (event index)','Shapley Value']
     )
 
+    # Event and cell values go through shap's lasso feature selection (l1_reg="auto").
+    # Regenerated for 1.0.5: identical on shap 0.42.1 to 0.53.
     event_data = pd.DataFrame(
-        [[42, 50, 'Event -1', 0.0260],
+        [[42, 50, 'Event -1', 0.0360],
          [42, 50, 'Event -2', 0.0000],
-         [42, 50, 'Event -3', 0.1538],
+         [42, 50, 'Event -3', 0.0861],
          [42, 50, 'Event -4', 0.0000],
          [42, 50, 'Event -5', 0.0000],
          [42, 50, 'Event -6', 0.0000],
          [42, 50, 'Event -7', 0.0000],
          [42, 50, 'Event -8', 0.0000],
-         [42, 50, 'Event -9', 0.0686],
+         [42, 50, 'Event -9', 0.0835],
          [42, 50, 'Event -10', 0.0000],
-         [42, 50, 'Event -11', 0.1205],
+         [42, 50, 'Event -11', 0.0913],
          [42, 50, 'Event -12', 0.0000],
-         [42, 50, 'Event -13', 0.0000],
-         [42, 50, 'Event -14', 0.0000],
+         [42, 50, 'Event -13', 0.0389],
+         [42, 50, 'Event -14', 0.0334],
          [42, 50, 'Event -15', 0.0000],
          [42, 50, 'Event -16', 0.0000],
-         [42, 50, 'Event -17', 0.2153],
+         [42, 50, 'Event -17', 0.1547],
          [42, 50, 'Event -18', 0.0000],
-         [42, 50, 'Event -19', 0.0000],
+         [42, 50, 'Event -19', 0.0129],
          [42, 50, 'Event -20', 0.0000],
-         [42, 50, 'Event -21', 0.0562],
+         [42, 50, 'Event -21', 0.0555],
          [42, 50, 'Event -22', 0.0000],
          [42, 50, 'Event -23', 0.0000],
-         [42, 50, 'Event -24', 0.1595],
+         [42, 50, 'Event -24', 0.1615],
          [42, 50, 'Event -25', 0.0000],
          [42, 50, 'Event -26', 0.0000],
-         [42, 50, 'Pruned Events', 0.0000], ],
+         [42, 50, 'Pruned Events', 0.0460], ],
         columns=['Random seed','NSamples','Feature','Shapley Value']
     )
 
@@ -241,16 +243,16 @@ def get_calc_local_answers():
     )
 
     cell_data = pd.DataFrame(
-        [['Other Events', 'p_var_rss23_normalized', 0.2603],
-         ['Pruned Events', 'Pruned Events', 0.2445],
-         ['Other Events', 'p_var_rss13_normalized', 0.162],
-         ['Other Events', 'Other Features', 0.1332],
-         ['Event -24', 'p_var_rss13_normalized', 0.0],
-         ['Event -24', 'p_var_rss23_normalized', 0.0],
-         ['Event -17', 'p_var_rss13_normalized', 0.0],
-         ['Event -17', 'p_var_rss23_normalized', 0.0],
-         ['Event -24', 'Other Features', 0.0],
-         ['Event -17', 'Other Features', 0.0],],
+        [['Other Events', 'p_var_rss23_normalized', 0.2791],
+         ['Pruned Events', 'Pruned Events', 0.1791],
+         ['Other Events', 'p_var_rss13_normalized', 0.1775],
+         ['Other Events', 'Other Features', 0.1346],
+         ['Event -24', 'p_var_rss13_normalized', 0.0574],
+         ['Event -17', 'Other Features', 0.0399],
+         ['Event -17', 'p_var_rss23_normalized', 0.0365],
+         ['Event -24', 'p_var_rss23_normalized', 0.0000],
+         ['Event -17', 'p_var_rss13_normalized', -0.0337],
+         ['Event -24', 'Other Features', -0.0705], ],
         columns=['Event','Feature','Shapley Value']
     )
     return pruning_data, event_data, feat_data, cell_data

@@ -152,13 +152,20 @@ def local_feat(f: Callable[[np.ndarray], np.ndarray],
     return feat_data
 
 
-def verify_feature_dict(feature_dict: dict):
-    """Verifies the format of the feature dict for event level explanations
+def verify_feature_dict(feature_dict: dict) -> dict:
+    """Verifies the format of the feature dict for feature level explanations
 
     Parameters
     ----------
     feature_dict: dict
+
+    Returns
+    -------
+    dict
+        A copy of `feature_dict` with random seeds, nsamples and tolerances as lists.
+        The given dict is not changed.
     """
+    feature_dict = dict(feature_dict)
     if feature_dict.get('path'):
         assert isinstance(feature_dict.get('path'), str), "Provided path must be a string"
 
@@ -199,6 +206,7 @@ def verify_feature_dict(feature_dict: dict):
     if feature_dict.get('feature_names', False):
         assert isinstance(feature_dict.get('feature_names'), list)
         assert np.array([isinstance(x, str) for x in feature_dict.get('feature_names')]).all(), "All provided features must be strings."
+    return feature_dict
 
 
 def feat_explain_all(f: Callable,
@@ -231,7 +239,9 @@ def feat_explain_all(f: Callable,
         Information required for the feature level explanation calculation
 
     entity_col: str
-        Entity column to identify sequences
+        Entity column to identify sequences.
+        Without it, a sequence is identified by its position in `data`, and
+        files that `append_to_files` extends across runs can mix those positions.
 
     pruning_data: pd.DataFrame
         Pruning indexes for all sequences being explained.
@@ -249,7 +259,9 @@ def feat_explain_all(f: Callable,
         Schema of provided data
 
     entity_col: str
-        Entity column to identify sequences
+        Entity column to identify sequences.
+        Without it, a sequence is identified by its position in `data`, and
+        files that `append_to_files` extends across runs can mix those positions.
 
     time_col: str
         Data column that represents the time feature in order to sort sequences
@@ -267,7 +279,7 @@ def feat_explain_all(f: Callable,
     """
     if schema is None and isinstance(data, pd.DataFrame):
         schema = list(data.columns)
-    verify_feature_dict(feat_dict)
+    feat_dict = verify_feature_dict(feat_dict)
     file_path = feat_dict.get('path')
     make_predictions = True
     feat_data = None
@@ -317,7 +329,7 @@ def feat_explain_all(f: Callable,
             else:
                 if '/' in file_path:
                     Path(file_path.rsplit("/", 1)[0]).mkdir(parents=True, exist_ok=True)
-                with open(file_path, 'w', newline='') as file:
+                with open(file_path, 'w', newline='', encoding='utf-8') as file:
                     writer = csv.writer(file, delimiter=',')
                     writer.writerow(names)
 
@@ -330,9 +342,9 @@ def feat_explain_all(f: Callable,
         ret_feat_data = []
         for rs in random_seeds:
             for ns in nsamples:
-                for sequence in data:
-                    if entity_col is not None:
-                        entity = sequence[0, 0, entity_col_index]
+                for sequence_idx, sequence in enumerate(data):
+                    # without an entity column, a sequence is identified by its position in `data`, as in `prune_all`
+                    entity = sequence[0, 0, entity_col_index] if entity_col is not None else sequence_idx
                     if model_features:
                         sequence = sequence[:, :, model_features_index]
                     sequence = sequence.astype(np.float64)
@@ -343,8 +355,8 @@ def feat_explain_all(f: Callable,
                             pruning_idx = 0
                         elif pruning_data is None:
                             #we need to perform the pruning on the fly
-                            coal_prun_idx, _ = temp_coalition_pruning(f, sequence, baseline, tol)
-                            pruning_idx = data.shape[1] + coal_prun_idx
+                            coal_prun_idx = temp_coalition_pruning(f, sequence, baseline, tol)
+                            pruning_idx = sequence.shape[1] + coal_prun_idx
                         else:
                             instance = pruning_data[pruning_data["Entity"] == entity]
                             pruning_idx = instance[instance['Tolerance'] == tol]['Pruning idx'].iloc[0]
@@ -358,11 +370,11 @@ def feat_explain_all(f: Callable,
                             if feat_dict.get('feature_names'):
                                 local_feat_dict['feature_names'] = feat_dict.get('feature_names')
                             feat_data = local_feat(f, sequence, local_feat_dict, entity, entity_col, baseline, pruning_idx)
-                            feat_data[entity_col] = entity
+                            feat_data['Entity'] = entity
                             feat_data['Tolerance'] = tol
 
                         if file_path is not None:
-                            with open(file_path, 'a', newline='') as file:
+                            with open(file_path, 'a', newline='', encoding='utf-8') as file:
                                 writer = csv.writer(file, delimiter=',')
                                 writer.writerows(feat_data.values)
                         ret_feat_data.append(feat_data.values)

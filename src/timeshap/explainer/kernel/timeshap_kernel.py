@@ -50,7 +50,11 @@ from timeshap.utils.timeshap_legacy import time_shap_match_instance_to_data, \
     time_shap_match_model_to_data, time_shap_convert_to_data, TimeShapDenseData
 from shap.utils._legacy import convert_to_link, IdentityLink
 from shap.utils._legacy import convert_to_instance, convert_to_model
-from shap.explainers._kernel import Kernel
+try:
+    # shap >= 0.43 renamed `Kernel` to `KernelExplainer` (shap/shap#3247)
+    from shap.explainers._kernel import KernelExplainer as Kernel
+except ImportError:
+    from shap.explainers._kernel import Kernel
 from scipy.special import binom
 from scipy.sparse import issparse
 
@@ -121,7 +125,7 @@ class TimeShapKernel(Kernel):
         self.returns_hs = None
         self.background_hs = None
         self.instance_hs = None
-        if mode in 'cell':
+        if mode == 'cell':
             if varying is None:
                 # The algorithm supports the calculation using all events and features
                 # but its computation is very expensive as the number of cells is very large

@@ -84,6 +84,11 @@ def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
     verbose: bool
         If process is verbose
 
+    Returns
+    -------
+    Tuple[dict, dict, dict]
+        Copies of the pruning, event and feature dicts in the format the
+        explainers expect. The given dicts are not changed.
     """
     validate_input(f, data, baseline, model_features, schema, entity_col, time_col)
 
@@ -92,7 +97,7 @@ def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
             assert entity_col is not None, "Entity column must be provided when using 2D numpy arrays as data"
 
     if pruning_dict is not None:
-        verify_pruning_dict(pruning_dict)
+        pruning_dict = verify_pruning_dict(pruning_dict)
 
         if pruning_dict.get("path"):
             if os.path.exists(pruning_dict.get("path")) and not append_to_files:
@@ -100,8 +105,8 @@ def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
                     "The defined path for pruning data already exists and the append option is turned off. TimeSHAP will only read from this file and will not create new explanation data")
         else:
             print("No path to persist pruning data provided.")
-    verify_event_dict(event_dict)
-    verify_feature_dict(feature_dict)
+    event_dict = verify_event_dict(event_dict)
+    feature_dict = verify_feature_dict(feature_dict)
 
     if event_dict.get("path"):
         if os.path.exists(event_dict.get("path")) and not append_to_files:
@@ -114,6 +119,7 @@ def validate_global_input(f: Callable[[np.ndarray], np.ndarray],
             print("The defined path for feature explanations already exists and the append option is turned off. TimeSHAP will only read from this file and will not create new explanation data")
     else:
         print("No path to persist feature explanations provided.")
+    return pruning_dict, event_dict, feature_dict
 
 
 def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
@@ -164,7 +170,10 @@ def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
         Schema of provided data
 
     entity_col: str
-        Entity column to identify sequences
+        Entity column to identify sequences.
+        Without it, a sequence is identified by its position in `data`. When
+        `data` has more than `max_instances` sequences, the random sample
+        changes those positions on every run.
 
     time_col: str
         Data column that represents the time feature in order to sort sequences
@@ -194,7 +203,7 @@ def calc_global_explanations(f: Callable[[np.ndarray], np.ndarray],
         #schema = list(data.columns)
         schema = list(data.columns.map(str))
 
-    validate_global_input(
+    pruning_dict, event_dict, feature_dict = validate_global_input(
         f, data, pruning_dict, event_dict, feature_dict, baseline, model_features,
         schema, entity_col, time_col, append_to_files, verbose)
 
@@ -269,7 +278,10 @@ def global_report(f: Callable[[np.ndarray], np.ndarray],
         Schema of provided data
 
     entity_col: str
-        Entity column to identify sequences
+        Entity column to identify sequences.
+        Without it, a sequence is identified by its position in `data`. When
+        `data` has more than `max_instances` sequences, the random sample
+        changes those positions on every run.
 
     time_col: str
         Data column that represents the time feature in order to sort sequences

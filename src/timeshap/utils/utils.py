@@ -16,7 +16,31 @@ from typing import List, Union, Callable, Dict, Tuple
 import pandas as pd
 import numpy as np
 import copy
-from scipy import stats
+from collections import Counter
+
+
+def _mode(values: np.ndarray, axis: int = 0) -> np.ndarray:
+    """Most frequent value along `axis`.
+
+    Ties resolve to the smallest value, as `scipy.stats.mode` does. Unlike
+    `scipy.stats.mode` on scipy >= 1.11, it accepts non-numeric arrays and its
+    output shape does not depend on the scipy version. In a column that mixes
+    types that cannot be compared, such as text and None, ties resolve to the
+    value seen first.
+    """
+    values = np.moveaxis(np.asarray(values), axis, 0)
+    columns = values.reshape(values.shape[0], -1)
+    # same dtype as the input, so an object array keeps each value's own type
+    modes = np.empty(columns.shape[1], dtype=values.dtype)
+    for i in range(columns.shape[1]):
+        try:
+            uniques, counts = np.unique(columns[:, i], return_counts=True)
+        except TypeError:
+            # np.unique sorts, and mixed types such as text and None cannot be sorted
+            modes[i] = Counter(columns[:, i]).most_common(1)[0][0]
+            continue
+        modes[i] = uniques[np.argmax(counts)]
+    return modes.reshape(values.shape[1:])
 
 
 def validate_input(f, data, baseline, model_features, schema, entity_col, time_col):
@@ -247,7 +271,7 @@ def convert_to_indexes(model_features: List[Union[int, str]] = None,
     if time_col is not None:
         if isinstance(time_col, str):
             time_col_index = schema.index(time_col)
-        elif isinstance(entity_col, int):
+        elif isinstance(time_col, int):
             time_col_index = time_col
 
     return model_features_index, entity_col_index, time_col_index
@@ -307,9 +331,9 @@ def calc_avg_sequence(data: Union[pd.DataFrame, np.ndarray],
         numerical_indexes = numerical_feats
         categorical_indexes = categorical_feats
 
-    numerical = np.median(data[:, :,  numerical_indexes], axis=0)
+    numerical = np.median(data[:, :,  numerical_indexes].astype(float), axis=0)
     if len(categorical_indexes) > 0:
-        categorical = stats.mode(data[:, :,  categorical_indexes], axis=0)[0][0, :, :]
+        categorical = _mode(data[:, :,  categorical_indexes], axis=0)
         numerical = np.concatenate((numerical, categorical), axis=1)
     return numerical.astype(float)
 
@@ -366,12 +390,11 @@ def calc_avg_event(data: Union[pd.DataFrame, np.ndarray],
     else:
         raise ValueError
 
-    numerical = np.median(data[:,  numerical_indexes], axis=0)
-    if len(categorical_indexes) > 0:
-        categorical = stats.mode(data[:, categorical_indexes], axis=0)[0][0, :]
-        numerical = np.concatenate((numerical,categorical), axis=0)
+    numerical = np.median(data[:,  numerical_indexes].astype(float), axis=0)
+    categorical = _mode(data[:, categorical_indexes], axis=0) if len(categorical_indexes) > 0 else []
 
-    return pd.DataFrame([numerical], columns=ordered_feats)
+    # one value per column, so pandas infers each column's dtype on its own
+    return pd.DataFrame([list(numerical) + list(categorical)], columns=ordered_feats)
 
 
 def get_score_of_avg_sequence(model, data: np.ndarray) -> float:
@@ -433,5 +456,6 @@ def get_avg_score_with_avg_event(model,
             pred = model(tiled_background)
         else:
             pred, hs = model(expanded_copy, hs)
-        avg_score[x] = round(float(pred[0]), 6)
+        # numpy >= 2.5 refuses float() on an array with one element and ndim > 0
+        avg_score[x] = round(float(np.ravel(pred[0])[0]), 6)
     return avg_score
